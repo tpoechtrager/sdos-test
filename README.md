@@ -57,8 +57,8 @@ testing. Reports of oddities or bad functioning are important, but
     configuration values?
 - Minimization, general window/fullscreen handling
   - can you switch from the test client window/fullscreen to your
-    desktop? Try <kbd>alt-tab</kdb>, or <kbd>windows-R</kbd>, or
-    <kdb>ctrl+alt+d</kbd> too
+    desktop? Try <kbd>alt-tab</kbd>, or <kbd>windows-R</kbd>, or
+    <kbd>ctrl+alt+d</kbd> too
 - Vertical synch
   - variable `vsync` now is only 0 or 1 (-1 does not exist anymore)
   - there is a new variable `vsynctear`, effective if vsync is on,
