@@ -57,8 +57,8 @@ testing. Reports of oddities or bad functioning are important, but
     configuration values?
 - Minimization, general window/fullscreen handling
   - can you switch from the test client window/fullscreen to your
-    desktop? Try <kbd>alt-tab</kbd>, or <kbd>windows-R</kbd>, or
-    <kbd>ctrl+alt+d</kbd> too
+    desktop? Try <kbd>Alt</kbd>+<kbd>Tab</kbd>, or <kbd>windows</kbd>+<kbd>R</kbd>, or
+    <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> too
 - Vertical synch
   - variable `vsync` now is only 0 or 1 (-1 does not exist anymore)
   - there is a new variable `vsynctear`, effective if vsync is on,
@@ -81,7 +81,7 @@ testing. Reports of oddities or bad functioning are important, but
     useless, and will make the test client use one CPU core completely
 - `showfps 1` now uses a different internal logic: fps counting should
   be more precise and responsive, but the downside is that the refresh
-  rate is now fixed to one second.
+  rate is now fixed to one second. Also, `showfpsrange 1` has no effect.
 
 # Giving Feedback #
 
