@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#   100: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND memcpy@GLIBC_2.14 (9)
+#   ^
+symbolindx=`readelf -a sauer_client | grep -F $1 | sed 's|^ *\([0-9]\+\).*|\1|'`
+#  [ 7] .gnu.version      VERSYM           0000000000402bfa  00002bfa
+#                                                            ^
+fileoffset=`readelf -a sauer_client | grep -E '\] \.gnu\.version ' | perl -pe 's| .*?0*([0-f]+)$|\1|'`
+fileoffset=$((0x$fileoffset + $symbolindx * 2))
+printf '\x0' | dd of=sauer_client bs=1 seek=$fileoffset count=1 conv=notrunc status=none

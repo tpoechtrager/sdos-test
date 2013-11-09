@@ -1,0 +1,12 @@
+The build system is not guaranteed to work on any system setup other than mine. This source is released just FYI, not as something well oiled and production ready.
+
+To build, simply "make".
+
+Use the PREFIX variable to set the build flavor. Since I cross compile from linux 64 bit to linux 32 bit and windows, I do:
+	make PREFIX=i686-unknown-linux-gnu	#lin32
+	make PREFIX=i686-w64-mingw32		#win32
+	make PREFIX=x86_64-w64-mingw32		#win32
+Mac build works only on a native Mac OS. You need the Comman Line Tools and an updated "nasm" (not the Apple stock version), then do simply "make".
+
+If you want to change the optimization flags, use the variable OPTFLAGS.
+The cpu architecture (for example, "-march=native") may be set with the CPUINFO flag.
