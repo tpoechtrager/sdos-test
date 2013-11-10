@@ -1304,16 +1304,18 @@ int main(int argc, char **argv)
 
         updatefps(1);
 
+        if(!render) continue;
+
+        int start = SDL_GetTicks();
+
         // miscellaneous general game effects
         recomputecamera();
         updateparticles();
         updatesounds();
 
-        if(minimized || !render) continue;
+        if(minimized) continue;
 
         updatefps(0);
-
-        int start = SDL_GetTicks();
 
         inbetweenframes = false;
         if(mainmenu) gl_drawmainmenu();
