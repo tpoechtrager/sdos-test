@@ -964,6 +964,7 @@ bool limitfps(int &millis)
         if(multipoll && !mainmenu){						//take chance to poll input
             if(lastinputpoll == millis && multipoll<2) SDL_Delay(1);	//avoid polling more than 1000 times/sec
             lastinputpoll = millis;
+            millis = getclockmillis();
             return false;
         }
         SDL_Delay(nextdraw - millis);					//or sleep
