@@ -93,7 +93,7 @@ Send feedback
 When giving a feedback, please include:
 
 - some way to contact you back
-- version of the test client you use (only 1.0 as of now)
+- version of the test client you use
 - build type (OS and 32/64 bit if applicable)
 - graphic card model and driver, if related to the issue
 - mouse model, if related to the issue
