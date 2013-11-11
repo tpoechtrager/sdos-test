@@ -131,6 +131,8 @@ MACOBJC= \
 	xcode/main.o
 MACOBJCXX= xcode/macutils.o
 
+SAUER_DEPLIBS= libz libenet libSDL libSDL_image libSDL_mixer
+
 ifdef LINUX
 ifneq (, $(findstring x86_64,$(PREFIX)))
 override LDFLAGS+= -Wl,--wrap=__pow_finite,--wrap=__acosf_finite,--wrap=__log_finite,--wrap=__exp_finite,--wrap=__logf_finite,--wrap=__expf_finite,--wrap=__asin_finite,--wrap=__atan2f_finite,--wrap=__log10f_finite,--wrap=__atan2_finite,--wrap=__acos_finite,--wrap=memcpy
@@ -192,13 +194,8 @@ libSDL_image/Makefile: libSDL libjpeg libpng
 	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_lib_jpeg_jpeg_CreateDecompress=yes ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-imageio=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 endif
 
-ifndef MAC
-lib%: lib%/Makefile
-	$(MAKE)	-C $@/ -j$(THREADS) install
-else
 lib%: lib%/Makefile
 	$(MAKE)	-C $@/ install
-endif
 
 clean-lib%:
 	-$(MAKE) -C lib$*/ uninstall distclean
@@ -216,7 +213,7 @@ distclean: clean-libSDL_image clean-libSDL_mixer clean-libSDL clean-libvorbis cl
 $(CLIENT_OBJS): CXXFLAGS += $(CLIENT_INCLUDES)
 
 ifdef WINDOWS
-client: libenet libSDL libSDL_image libSDL_mixer $(BUILDXLIB) $(CLIENT_OBJS)
+client: $(CLIENT_OBJS)
 	$(WINDRES) -I vcpp -i vcpp/mingw.rc -J rc -o vcpp/mingw.res -O coff 
 	$(CXX) $(CXXFLAGS) -o sauerbraten.exe vcpp/mingw.res $(CLIENT_OBJS) -Wl,--as-needed -Wl,--start-group $(CLIENT_LIBS) -Wl,--end-group
 	$(STRIP) sauerbraten.exe
@@ -231,12 +228,12 @@ $(MACOBJCXX):
 $(MACOBJC):
 	clang -c $(CXXFLAGS) $(CLIENT_INCLUDES) -o $@ $(subst .o,.m,$@)
 
-client:	libenet libSDL libSDL_image libSDL_mixer $(BUILDXLIB) $(CLIENT_OBJS) $(MACOBJCXX) $(MACOBJC)
+client:	$(CLIENT_OBJS) $(MACOBJCXX) $(MACOBJC)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o sauer_client $(CLIENT_OBJS) $(MACOBJCXX) $(MACOBJC) $(CLIENT_LIBS) -framework IOKit -framework Cocoa -framework Carbon -framework CoreAudio -framework OpenGL -framework AudioUnit
 	$(STRIP) sauer_client
 endif
 ifdef LINUX
-client:	libenet libSDL libSDL_image libSDL_mixer $(BUILDXLIB) $(CLIENT_OBJS)
+client:	$(CLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o sauer_client $(CLIENT_OBJS) -Wl,--as-needed -Wl,--start-group $(CLIENT_LIBS) -lrt -Wl,--end-group
 	$(STRIP) sauer_client
 ifneq (, $(findstring x86_64,$(PREFIX)))
@@ -247,70 +244,70 @@ endif
 
 # DO NOT DELETE
 
-engine/3dgui.o: engine/engine.h engine/textedit.h
-engine/bih.o: engine/engine.h
-engine/blend.o: engine/engine.h
-engine/blob.o: engine/engine.h
-engine/client.o: engine/engine.h
-engine/command.o: engine/engine.h
-engine/console.o: engine/engine.h engine/sdl2_keymap_extrakeys.h
-engine/cubeloader.o: engine/engine.h
-engine/decal.o: engine/engine.h
-engine/dynlight.o: engine/engine.h
-engine/engine.h: shared/cube.h engine/world.h engine/octa.h engine/lightmap.h engine/bih.h engine/texture.h engine/model.h engine/varray.h
-engine/glare.o: engine/engine.h engine/rendertarget.h
-engine/grass.o: engine/engine.h
-engine/lightmap.o: engine/engine.h
-engine/main.o: engine/engine.h
-engine/master.o: shared/cube.h
-engine/material.o: engine/engine.h
-engine/menus.o: engine/engine.h
-engine/movie.o: engine/engine.h
-engine/normal.o: engine/engine.h
-engine/octa.o: engine/engine.h
-engine/octaedit.o: engine/engine.h
-engine/octarender.o: engine/engine.h
-engine/physics.o: engine/engine.h engine/mpr.h
-engine/pvs.o: engine/engine.h
-engine/rendergl.o: engine/engine.h engine/varray.h
-engine/rendermodel.o: engine/engine.h engine/ragdoll.h engine/animmodel.h engine/vertmodel.h engine/skelmodel.h engine/md2.h engine/md3.h engine/md5.h engine/obj.h engine/smd.h engine/iqm.h
-engine/renderparticles.o: engine/engine.h engine/rendertarget.h engine/depthfx.h engine/explosion.h engine/lensflare.h engine/lightning.h
-engine/rendersky.o: engine/engine.h
-engine/rendertext.o: engine/engine.h
-engine/renderva.o: engine/engine.h
-engine/serverbrowser.o: engine/engine.h
-engine/server.o: engine/engine.h
-engine/shader.o: engine/engine.h
-engine/shadowmap.o: engine/engine.h engine/rendertarget.h
-engine/sound.o: engine/engine.h
-engine/texture.o: engine/engine.h engine/scale.h
-engine/water.o: engine/engine.h
-engine/world.o: engine/engine.h
-engine/worldio.o: engine/engine.h
-fpsgame/ai.o: fpsgame/game.h
-fpsgame/cdemo.o: fpsgame/cdemo.h
-fpsgame/cdemo.h: fpsgame/game.h
-fpsgame/client.o: fpsgame/game.h fpsgame/cdemo.h fpsgame/capture.h fpsgame/ctf.h fpsgame/collect.h
-fpsgame/entities.o: fpsgame/game.h fpsgame/cdemo.h
-fpsgame/fps.o: fpsgame/game.h
-fpsgame/game.h: shared/cube.h fpsgame/ai.h
-fpsgame/monster.o: fpsgame/game.h
-fpsgame/movable.o: fpsgame/game.h
-fpsgame/render.o: fpsgame/game.h
-fpsgame/scoreboard.o: fpsgame/game.h
-fpsgame/server.o: fpsgame/game.h fpsgame/capture.h fpsgame/ctf.h fpsgame/collect.h fpsgame/extinfo.h fpsgame/aiman.h
-fpsgame/waypoint.o: fpsgame/game.h
-fpsgame/weapon.o: fpsgame/game.h fpsgame/cdemo.h
-shared/crypto.o: shared/cube.h
-shared/cube.h: shared/tools.h shared/geom.h shared/ents.h shared/command.h shared/iengine.h shared/igame.h
-shared/geom.o: shared/cube.h
-shared/stream.o: shared/cube.h
-shared/tools.o: shared/cube.h
-shared/zip.o: shared/cube.h
+engine/3dgui.o:		$(SAUER_DEPLIBS) engine/engine.h engine/textedit.h
+engine/bih.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/blend.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/blob.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/client.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/command.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/console.o:	$(SAUER_DEPLIBS) engine/engine.h engine/sdl2_keymap_extrakeys.h
+engine/cubeloader.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/decal.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/dynlight.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/engine.h:	$(SAUER_DEPLIBS) shared/cube.h engine/world.h engine/octa.h engine/lightmap.h engine/bih.h engine/texture.h engine/model.h engine/varray.h
+engine/glare.o:		$(SAUER_DEPLIBS) engine/engine.h engine/rendertarget.h
+engine/grass.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/lightmap.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/main.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/master.o:	$(SAUER_DEPLIBS) shared/cube.h
+engine/material.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/menus.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/movie.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/normal.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/octa.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/octaedit.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/octarender.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/physics.o:	$(SAUER_DEPLIBS) engine/engine.h engine/mpr.h
+engine/pvs.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/rendergl.o:	$(SAUER_DEPLIBS) engine/engine.h engine/varray.h
+engine/rendermodel.o:	$(SAUER_DEPLIBS) engine/engine.h engine/ragdoll.h engine/animmodel.h engine/vertmodel.h engine/skelmodel.h engine/md2.h engine/md3.h engine/md5.h engine/obj.h engine/smd.h engine/iqm.h
+engine/renderparticles.o: $(SAUER_DEPLIBS) engine/engine.h engine/rendertarget.h engine/depthfx.h engine/explosion.h engine/lensflare.h engine/lightning.h
+engine/rendersky.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/rendertext.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/renderva.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/serverbrowser.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/server.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/shader.o:	$(SAUER_DEPLIBS) engine/engine.h
+engine/shadowmap.o:	$(SAUER_DEPLIBS) engine/engine.h engine/rendertarget.h
+engine/sound.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/texture.o:	$(SAUER_DEPLIBS) engine/engine.h engine/scale.h
+engine/water.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/world.o:		$(SAUER_DEPLIBS) engine/engine.h
+engine/worldio.o:	$(SAUER_DEPLIBS) engine/engine.h
+fpsgame/ai.o:		$(SAUER_DEPLIBS) fpsgame/game.h
+fpsgame/cdemo.o:	$(SAUER_DEPLIBS) fpsgame/cdemo.h
+fpsgame/cdemo.h:	$(SAUER_DEPLIBS) fpsgame/game.h
+fpsgame/client.o:	$(SAUER_DEPLIBS) fpsgame/game.h fpsgame/cdemo.h fpsgame/capture.h fpsgame/ctf.h fpsgame/collect.h
+fpsgame/entities.o:	$(SAUER_DEPLIBS) fpsgame/game.h fpsgame/cdemo.h
+fpsgame/fps.o:		$(SAUER_DEPLIBS) fpsgame/game.h
+fpsgame/game.h:		$(SAUER_DEPLIBS) shared/cube.h fpsgame/ai.h
+fpsgame/monster.o:	$(SAUER_DEPLIBS) fpsgame/game.h
+fpsgame/movable.o:	$(SAUER_DEPLIBS) fpsgame/game.h
+fpsgame/render.o:	$(SAUER_DEPLIBS) fpsgame/game.h
+fpsgame/scoreboard.o:	$(SAUER_DEPLIBS) fpsgame/game.h
+fpsgame/server.o:	$(SAUER_DEPLIBS) fpsgame/game.h fpsgame/capture.h fpsgame/ctf.h fpsgame/collect.h fpsgame/extinfo.h fpsgame/aiman.h
+fpsgame/waypoint.o:	$(SAUER_DEPLIBS) fpsgame/game.h
+fpsgame/weapon.o:	$(SAUER_DEPLIBS) fpsgame/game.h fpsgame/cdemo.h
+shared/crypto.o:	$(SAUER_DEPLIBS) shared/cube.h
+shared/cube.h:		$(SAUER_DEPLIBS) shared/tools.h shared/geom.h shared/ents.h shared/command.h shared/iengine.h shared/igame.h
+shared/geom.o:		$(SAUER_DEPLIBS) shared/cube.h
+shared/stream.o:	$(SAUER_DEPLIBS) shared/cube.h
+shared/tools.o:		$(SAUER_DEPLIBS) shared/cube.h
+shared/zip.o:		$(SAUER_DEPLIBS) shared/cube.h
 
-xcode/Launcher.o: xcode/Launcher.h
-xcode/main.o: xcode/Launcher.h
+xcode/Launcher.o:	$(SAUER_DEPLIBS) xcode/Launcher.h
+xcode/main.o:		$(SAUER_DEPLIBS) xcode/Launcher.h
 
-quirks/oldglibc32.o: quirks/wrapper.hpp
-quirks/oldglibc64.o: quirks/wrapper.hpp
+quirks/oldglibc32.o:	$(SAUER_DEPLIBS) quirks/wrapper.hpp
+quirks/oldglibc64.o:	$(SAUER_DEPLIBS) quirks/wrapper.hpp
 
