@@ -84,9 +84,6 @@ testing. Reports of oddities or bad functioning are important, but
     give you the maximum logic frame rate, while drawing just the right
     amount of frames to have a smooth video without tearing at all, without
     wasting GPU power drawing more frames than your monitor refresh rate.
-  - if you really want to push it to the extreme, use `multipoll 2`:
-    input will be polled continuously. Warning: this is likely to be
-    useless, and will make the test client use one CPU core completely
 - `showfps 1` now uses a different internal logic: fps counting should
   be more precise and responsive, but the downside is that the refresh
   rate is now fixed to one second. Also, `showfpsrange 1` has no effect.
