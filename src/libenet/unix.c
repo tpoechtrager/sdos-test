@@ -432,7 +432,7 @@ enet_socket_receive (ENetSocket socket,
 
 #ifdef HAS_MSGHDR_FLAGS
     if (msgHdr.msg_flags & MSG_TRUNC)
-      return 0;
+      return -1;
 #endif
 
     if (address != NULL)

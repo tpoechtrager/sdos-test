@@ -2356,7 +2356,7 @@ ICOMMAND(pushif, "rte", (ident *id, tagval *v, uint *code),
     }
 });
 
-void loopiter(ident *id, identstack &stack, tagval &v)
+void loopiter(ident *id, identstack &stack, const tagval &v)
 {
     if(id->stack != &stack)
     {
@@ -2642,16 +2642,17 @@ void listfind(ident *id, const char *list, const uint *body)
 {
     if(id->type!=ID_ALIAS) { intret(-1); return; }
     identstack stack;
-    int n = 0;
-    for(const char *s = list, *start, *end; parselist(s, start, end); n++)
+    int n = -1;
+    for(const char *s = list, *start, *end; parselist(s, start, end);)
     {
+        ++n;
         char *val = newstring(start, end-start);
         setiter(*id, val, stack);
         if(executebool(body)) { intret(n); goto found; }
     }
     intret(-1);
 found:
-    if(n) poparg(*id);
+    if(n >= 0) poparg(*id);
 }
 COMMAND(listfind, "rse");
 
@@ -3054,6 +3055,23 @@ ICOMMAND(echo, "C", (char *s), conoutf("\f1%s", s));
 ICOMMAND(error, "C", (char *s), conoutf(CON_ERROR, "%s", s));
 ICOMMAND(strstr, "ss", (char *a, char *b), { char *s = strstr(a, b); intret(s ? s-a : -1); });
 ICOMMAND(strlen, "s", (char *s), intret(strlen(s)));
+ICOMMAND(strcode, "si", (char *s, int *i), intret(*i > 0 ? (memchr(s, 0, *i) ? 0 : uchar(s[*i])) : uchar(s[0])));
+ICOMMAND(codestr, "i", (int *i), { char *s = newstring(1); s[0] = char(*i); s[1] = '\0'; stringret(s); });
+ICOMMAND(struni, "si", (char *s, int *i), intret(*i > 0 ? (memchr(s, 0, *i) ? 0 : cube2uni(s[*i])) : cube2uni(s[0])));
+ICOMMAND(unistr, "i", (int *i), { char *s = newstring(1); s[0] = uni2cube(*i); s[1] = '\0'; stringret(s); }); 
+
+#define STRMAPCOMMAND(name, map) \
+    ICOMMAND(name, "s", (char *s), \
+    { \
+        int len = strlen(s); \
+        char *m = newstring(len); \
+        loopi(len) m[i] = map(s[i]); \
+        m[len] = '\0'; \
+        stringret(m); \
+    })
+
+STRMAPCOMMAND(strlower, cubelower);
+STRMAPCOMMAND(strupper, cubeupper);
 
 char *strreplace(const char *s, const char *oldval, const char *newval)
 {

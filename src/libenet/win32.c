@@ -346,7 +346,7 @@ enet_socket_receive (ENetSocket socket,
     }
 
     if (flags & MSG_PARTIAL)
-      return 0;
+      return -1;
 
     if (address != NULL)
     {

@@ -204,6 +204,18 @@ clean-libz:
 	-$(MAKE) -C libz/ uninstall distclean
 	-$(RM) libz/Makefile libz/zconf.h
 
+clean-libSDL:
+	-$(MAKE) -C libSDL/ uninstall distclean
+	-$(RM) libSDL/include/SDL_config.h libSDL/sdl2.pc
+
+clean-libSDL_mixer:
+	-$(MAKE) -C libSDL_mixer/ uninstall distclean
+	-$(RM) libSDL_mixer/SDL2_mixer.spec
+
+clean-libjpeg:
+	-$(MAKE) -C libjpeg/ uninstall distclean
+	-$(RM) libjpeg/simd/jsimdcfg.inc
+
 clean:
 	-$(RM) -r $(CLIENT_OBJS) $(MACOBJC) $(MACOBJCXX) quirks/*.o sauer_client sauerbraten.exe vcpp/mingw.res
 

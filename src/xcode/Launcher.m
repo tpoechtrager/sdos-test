@@ -60,7 +60,7 @@
         CFRelease(url);
         path = [path stringByAppendingPathComponent:kSAUERBRATEN];
         NSFileManager *fm = [NSFileManager defaultManager];
-        if (![fm fileExistsAtPath:path]) [fm createDirectoryAtPath:path attributes:nil]; // ensure it exists
+        if (![fm fileExistsAtPath:path]) [fm createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:nil]; // ensure it exists
     }
     userPath = [path retain];    
 }

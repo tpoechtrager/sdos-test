@@ -1,0 +1,11 @@
+/sauer_client
+share
+man
+bin
+etc
+include
+lib*
+*/*.o
+*/*.res
+*/*.h.gch
+*.exe

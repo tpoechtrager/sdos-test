@@ -406,19 +406,19 @@ namespace server
         b.time = totalmillis;
         b.expire = totalmillis + expire;
         b.ip = ip;
-        loopv(bannedips) if(b.expire < bannedips[i].expire) { bannedips.insert(i, b); return; }
+        loopv(bannedips) if(bannedips[i].expire - b.expire > 0) { bannedips.insert(i, b); return; }
         bannedips.add(b);
     }
 
     vector<clientinfo *> connects, clients, bots;
 
-    void kickclients(uint ip, clientinfo *actor = NULL)
+    void kickclients(uint ip, clientinfo *actor = NULL, int priv = PRIV_NONE)
     {
         loopvrev(clients)
         {
             clientinfo &c = *clients[i];
             if(c.state.aitype != AI_NONE || c.privilege >= PRIV_ADMIN || c.local) continue;
-            if(actor && (c.privilege > actor->privilege || c.clientnum == actor->clientnum)) continue;
+            if(actor && ((c.privilege > priv && !actor->local) || c.clientnum == actor->clientnum)) continue;
             if(getclientip(c.clientnum) == ip) disconnect_client(c.clientnum, DISC_KICK);
         }
     }
@@ -1439,7 +1439,7 @@ namespace server
         if((priv || ci->local) && ci->clientnum!=victim)
         {
             clientinfo *vinfo = (clientinfo *)getclientinfo(victim);
-            if(vinfo && (priv >= vinfo->privilege || ci->local) && vinfo->privilege < PRIV_ADMIN && !vinfo->local)
+            if(vinfo && vinfo->connected && (priv >= vinfo->privilege || ci->local) && vinfo->privilege < PRIV_ADMIN && !vinfo->local)
             {
                 if(trial) return true;
                 string kicker;
@@ -1453,7 +1453,7 @@ namespace server
                 else sendservmsgf("%s kicked %s", kicker, colorname(vinfo));
                 uint ip = getclientip(victim);
                 addban(ip, 4*60*60000);
-                kickclients(ip, ci);
+                kickclients(ip, ci, priv);
             }
         }
         return false;
@@ -2568,7 +2568,7 @@ namespace server
         loopvrev(clients)
         {
             clientinfo *ci = clients[i];
-            if(ci->local || ci->privilege >= PRIV_ADMIN) continue;
+            if(ci->state.aitype != AI_NONE || ci->local || ci->privilege >= PRIV_ADMIN) continue;
             if(checkgban(getclientip(ci->clientnum))) disconnect_client(ci->clientnum, DISC_IPBAN);
         }
     }
@@ -3299,7 +3299,7 @@ namespace server
                 int spectator = getint(p), val = getint(p);
                 if(!ci->privilege && !ci->local && (spectator!=sender || (ci->state.state==CS_SPECTATOR && mastermode>=MM_LOCKED))) break;
                 clientinfo *spinfo = (clientinfo *)getclientinfo(spectator); // no bots
-                if(!spinfo || (spinfo->state.state==CS_SPECTATOR ? val : !val)) break;
+                if(!spinfo || !spinfo->connected || (spinfo->state.state==CS_SPECTATOR ? val : !val)) break;
 
                 if(spinfo->state.state!=CS_SPECTATOR && val)
                 {
@@ -3329,7 +3329,7 @@ namespace server
                 filtertext(text, text, false, MAXTEAMLEN);
                 if(!ci->privilege && !ci->local) break;
                 clientinfo *wi = getinfo(who);
-                if(!m_teammode || !text[0] || !wi || !strcmp(wi->team, text)) break;
+                if(!m_teammode || !text[0] || !wi || !wi->connected || !strcmp(wi->team, text)) break;
                 if((!smode || smode->canchangeteam(wi, wi->team, text)) && addteaminfo(text))
                 {
                     if(wi->state.state==CS_ALIVE) suicide(wi);
@@ -3421,7 +3421,7 @@ namespace server
                 {
                     if(!ci->privilege && !ci->local) break;
                     clientinfo *minfo = (clientinfo *)getclientinfo(mn);
-                    if(!minfo || (!ci->local && minfo->privilege >= ci->privilege) || (val && minfo->privilege)) break;
+                    if(!minfo || !minfo->connected || (!ci->local && minfo->privilege >= ci->privilege) || (val && minfo->privilege)) break;
                     setmaster(minfo, val!=0, "", NULL, NULL, PRIV_MASTER, true);
                 }
                 else setmaster(ci, val!=0, text);
