@@ -70,12 +70,20 @@ testing. Reports of oddities or bad functioning are important, but
   not needing anymore an .oldglibc version, report if this is not the
   case
 - Bonus pro setting `multipoll 0|1|2`: low latency input
-  - test `multipoll 1` this with `vsync 0` and maxfps set to something
-    appropriate (tipycally a multiple of your monitor refresh, 60):
-    the fps will be limited by `maxfps`, but contrary to vanilla the
-    input will be polled at least once per millisecond, not once for
-    each drawn frame. Please report your impressions, together with
-    the numbers you get with `showfps 1`
+  - `multipoll` allows the engine to keep spinning (read input, update
+    world state) while the graphic card is busy drawing. Usually top
+    players set `vsync 0` and `maxfps 0` or to a multiple of the monitor
+    refresh rate, to obtain a sufficient number of input polls.
+    `multipoll` should enable you to avoid this workaround in its entirety,
+    and only block the input only when it's really necessary to (that is,
+    when the state of the world is drawn so it must not be changed).
+    Long story short, the suggested setting is: `/maxfps 0; /vsync 1; /multipoll 2`.
+    Please report your impressions, together with the numbers you get
+    with `showfps 1`. You may also try different combination of `multipoll`
+    values, but what I suggested is theoretically the setting that should
+    give you the maximum logic frame rate, while drawing just the right
+    amount of frames to have a smooth video without tearing at all, without
+    wasting GPU power drawing more frames than your monitor refresh rate.
   - if you really want to push it to the extreme, use `multipoll 2`:
     input will be polled continuously. Warning: this is likely to be
     useless, and will make the test client use one CPU core completely
