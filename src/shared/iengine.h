@@ -239,11 +239,9 @@ struct screenlockholder
         if(!holdrecursion) SDL_GL_MakeCurrent(NULL, NULL);
         SDL_UnlockMutex(screenmutex);
     }
-private:
     const bool dolock;
     static SDL_mutex *screenmutex;
     static int holdrecursion;
-    friend int main(int argc, char **argv);
 };
 #define holdscreenlock screenlockholder __scrlck
 
