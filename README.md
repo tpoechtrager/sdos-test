@@ -72,7 +72,9 @@ testing. Reports of oddities or bad functioning are important, but
 - `showfps 1` now uses a different internal logic: fps counting should
   be more precise and responsive, but the downside is that the refresh
   rate is now fixed to one second. Also, `showfpsrange 1` has no effect.
-- Bonus pro setting `multipoll -1|0|1`: low latency input.
+
+## Bonus pro setting `multipoll -1|0|1`: low latency input. ##
+
   Before explaining the meaning of /multipoll, it's better to have a look
   at the info printed by `/showfps 1`:
   - "fps"  : the frames drawn on screen per second
