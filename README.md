@@ -69,24 +69,55 @@ testing. Reports of oddities or bad functioning are important, but
   found on Debian wheezy) should now be able to run the normal binary,
   not needing anymore an .oldglibc version, report if this is not the
   case
-- Bonus pro setting `multipoll 0|1|2`: low latency input
-  - `multipoll` allows the engine to keep spinning (read input, update
-    world state) while the graphic card is busy drawing. Usually top
-    players set `vsync 0` and `maxfps 0` or to a multiple of the monitor
-    refresh rate, to obtain a sufficient number of input polls.
-    `multipoll` should enable you to avoid this workaround in its entirety,
-    and only block the input only when it's really necessary to (that is,
-    when the state of the world is drawn so it must not be changed).
-    Long story short, the suggested setting is: `/maxfps 0; /vsync 1; /multipoll 2`.
-    Please report your impressions, together with the numbers you get
-    with `showfps 1`. You may also try different combination of `multipoll`
-    values, but what I suggested is theoretically the setting that should
-    give you the maximum logic frame rate, while drawing just the right
-    amount of frames to have a smooth video without tearing at all, without
-    wasting GPU power drawing more frames than your monitor refresh rate.
 - `showfps 1` now uses a different internal logic: fps counting should
   be more precise and responsive, but the downside is that the refresh
   rate is now fixed to one second. Also, `showfpsrange 1` has no effect.
+- Bonus pro setting `multipoll -1|0|1`: low latency input.
+  Before explaining the meaning of /multipoll, it's better to have a look
+  at the info printed by `/showfps 1`:
+  - "fps"  : the frames drawn on screen per second
+  - "ifps" : the engine refreshes per second (input polling, networking,
+    physics..., what you really want to be responsive)
+  - "draw" : the milliseconds that drawing a frame takes
+  Competitive players usually set /vsync 0 and a high /maxfps, because in
+  most games, Sauerbraten included, there is a single engine refresh
+  per frame drawn ("fps" == "ifps"). This minimizes input lag, but you get:
+  - screen tearing, because display update happens with a steady pace
+    (usually 60 Hz), and with /vsync 0 you don't sinchronize to that pace
+    (you draw more, less, or starting at different times)
+  - waste of CPU/GPU resources
+  - you usually don't get more than 200-300 fps
+  `/multipoll` tries to fix this problem by breaking the equality of fps
+  and ifps, e.g. the engine is refreshed more often than frames are drawn.
+  Since the world state cannot be modified while the frame is drawn, and
+  refreshing the engine is a very cheap operation, basically the maximum
+  input lag that you can encounter equals the "draw" value shown in the
+  fps statistics, and how often that delay happens is exactly "fps" times
+  in a second.
+
+  - `/multipoll  0`: one frame drawn for each engine update, as in vanilla.
+  - `/multipoll -1`: engine is refreshed continuously, but every 1000/`maxfps`
+    milliseconds a frame is drawn. Pros: known to work (it was shipped with
+    SDoS test client 1.1). Cons: `vsync` has to be disabled (because it would
+    block the same thread that runs engine updates) so you do get tearing,
+    and a good value of /maxfps must be sought by trial and error (but
+    generally it is either very high or a multiple of your screen refresh rate)
+  - `/multipoll +1`: a separate thread handles flushing the graphic card
+    commands and waiting for `vsync`, the main thread refreshes the engines
+    continuously and when the other thread signals availability a frame is
+    drawn. Pros: doesn't need `maxfps` (set it to 0), works very well with and
+    without `vsync`. With it, you get the advantages of multipoll  and no
+    tearing at all, and you minimize the number of frames drawn (cfr maximum
+    input lag and draw millis), without you may get a smaller value of draw
+    millis (cfr draw millis again). Cons: it simply crashes or freezes on
+    some setups. After a lot of experimenting I believe that it comes down
+    to the video card driver to either support multithreading in OpenGL or not.
+
+  Ultimately, it's up to you to choose the values that best suit you. I personally
+  think that `vsync` makes everything a whole lot smoother, and `/multipoll 1`
+  works for me, so that is my choice. If you think that `vsync` is not for you
+  first try `/multipoll 1` and `/vsync 0`, and only if it doesn't work try
+  `/multipoll -1`.
 
 # Giving Feedback #
 
