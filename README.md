@@ -79,6 +79,7 @@ testing. Reports of oddities or bad functioning are important, but
   - "ifps" : the engine refreshes per second (input polling, networking,
     physics..., what you really want to be responsive)
   - "draw" : the milliseconds that drawing a frame takes
+
   Competitive players usually set /vsync 0 and a high /maxfps, because in
   most games, Sauerbraten included, there is a single engine refresh
   per frame drawn ("fps" == "ifps"). This minimizes input lag, but you get:
@@ -87,6 +88,7 @@ testing. Reports of oddities or bad functioning are important, but
     (you draw more, less, or starting at different times)
   - waste of CPU/GPU resources
   - you usually don't get more than 200-300 fps
+
   `/multipoll` tries to fix this problem by breaking the equality of fps
   and ifps, e.g. the engine is refreshed more often than frames are drawn.
   Since the world state cannot be modified while the frame is drawn, and
@@ -94,7 +96,6 @@ testing. Reports of oddities or bad functioning are important, but
   input lag that you can encounter equals the "draw" value shown in the
   fps statistics, and how often that delay happens is exactly "fps" times
   in a second.
-
   - `/multipoll  0`: one frame drawn for each engine update, as in vanilla.
   - `/multipoll -1`: engine is refreshed continuously, but every 1000/`maxfps`
     milliseconds a frame is drawn. Pros: known to work (it was shipped with
