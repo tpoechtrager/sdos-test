@@ -112,9 +112,10 @@ testing. Reports of oddities or bad functioning are important, but
     without `vsync`. With it, you get the advantages of multipoll  and no
     tearing at all, and you minimize the number of frames drawn (cfr maximum
     input lag and draw millis), without you may get a smaller value of draw
-    millis (cfr draw millis again). Cons: it simply crashes or freezes on
-    some setups. After a lot of experimenting I believe that it comes down
-    to the video card driver to either support multithreading in OpenGL or not.
+    millis (cfr draw millis again). Cons: functioning highly depends on the driver
+    implementation, so it might just behave as `/mulitpoll 0` (rarely), or even
+    crash. With `/vsync 0` "fps" becomes unbounded and if you are used to a
+    lower but steady framerate (through `/maxfps`) you might not like it.
 
   Ultimately, it's up to you to choose the values that best suit you. I personally
   think that `vsync` makes everything a whole lot smoother, and `/multipoll 1`
