@@ -48,7 +48,6 @@ void fatal(const char *s, ...)    // failure exit
 
         if(errors <= 1) // avoid recursion
         {
-            holdscreenlock;
             if(SDL_WasInit(SDL_INIT_VIDEO))
             {
                 if(screen) SDL_SetWindowGrab(screen, SDL_FALSE);
@@ -463,7 +462,6 @@ void keyrepeat(bool on, int mask)
 
 void textinput(bool on, int mask)
 {
-    holdscreenlock;
     if(on) 
     {
         if(!textinputmask) SDL_StartTextInput(); 
@@ -478,7 +476,6 @@ void textinput(bool on, int mask)
 
 void inputgrab(bool on)
 {
-    holdscreenlock;
     if(on)
     {
         SDL_ShowCursor(SDL_FALSE);
@@ -749,7 +746,6 @@ void pushevent(const SDL_Event &e)
 
 static bool filterevent(const SDL_Event &event)
 {
-    holdscreenlock;
     switch(event.type)
     {
         case SDL_MOUSEMOTION:
@@ -806,7 +802,6 @@ static void ignoremousemotion()
 
 static void resetmousemotion()
 {
-    holdscreenlock;
     if(grabinput && !relativemouse && !(SDL_GetWindowFlags(screen) & SDL_WINDOW_FULLSCREEN))
     {
         SDL_WarpMouseInWindow(screen, screenw / 2, screenh / 2);
