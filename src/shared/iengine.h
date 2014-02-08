@@ -229,20 +229,15 @@ struct screenlockholder
 {
     screenlockholder(): dolock(screenmutex){
         if(!dolock) return;
-        if(SDL_LockMutex(screenmutex)){
-            fprintf(stderr, "Failed to lock screen mutex: %s\n", SDL_GetError());
-            exit(1);
-        }
+        SDL_LockMutex(screenmutex);
         if(!holdrecursion) SDL_GL_MakeCurrent(screen, glcontext);
         holdrecursion++;
     }
     ~screenlockholder(){
         if(!dolock) return;
         holdrecursion--;
-        if(SDL_UnlockMutex(screenmutex)){
-            fprintf(stderr, "Failed to unlock screen mutex: %s\n", SDL_GetError());
-            exit(1);
-        }
+        if(!holdrecursion) SDL_GL_MakeCurrent(NULL, NULL);
+        SDL_UnlockMutex(screenmutex);
     }
 private:
     const bool dolock;
