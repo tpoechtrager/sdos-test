@@ -4,7 +4,7 @@ ifeq ($(strip $(PREFIX)),)
 PREFIX=$(BUILDTRIPLET)
 endif
 
-STRIP=
+STRIP=true
 ifeq (,$(findstring -ggdb,$(CXXFLAGS)))
   STRIP=strip
 endif
@@ -46,7 +46,7 @@ CXXSTD= -std=c++11
 endif
 
 CXXFLAGS=$(OPTFLAGS)
-override CXXFLAGS+= $(CXXSTD) -fvisibility=hidden -fvisibility-inlines-hidden -Wall -fsigned-char -fno-exceptions -fno-rtti $(CPUINFO)
+override CXXFLAGS+= $(CXXSTD) -pthread -fvisibility=hidden -fvisibility-inlines-hidden -Wall -fsigned-char -fno-exceptions -fno-rtti $(CPUINFO)
 
 ifdef MAC
 override OPTFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden 
@@ -60,15 +60,15 @@ INCLUDES= -Ishared -Iengine -Ifpsgame -Iinclude -Iinclude/SDL2
 
 ifdef WINDOWS
 CLIENT_INCLUDES= $(INCLUDES)
-CLIENT_LIBS= -mwindows -static-libgcc -static-libstdc++ -Llib -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lws2_32 -lwinmm -lopengl32 -ldxguid -lgdi32 -lole32 -limm32 -lversion -loleaut32
+CLIENT_LIBS= -mwindows -static-libgcc -static-libstdc++ -Llib -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lws2_32 -lwinmm -lopengl32 -ldxguid -lgdi32 -lole32 -limm32 -lversion -loleaut32 -Wl,-Bstatic -lpthread
 endif
 ifdef LINUX
 CLIENT_INCLUDES= $(INCLUDES) -I/usr/X11R6/include
-CLIENT_LIBS= -Llib -L/usr/X11R6/lib -lX11 -lGL -lenet -lSDL2 -lpthread -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm -ldl
+CLIENT_LIBS= -Llib -L/usr/X11R6/lib -lX11 -lGL -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm -ldl
 endif
 ifdef MAC
 CLIENT_INCLUDES= $(INCLUDES)
-CLIENT_LIBS= -Llib -lenet -lSDL2 -lpthread -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm -ldl
+CLIENT_LIBS= -Llib -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm -ldl
 endif
 
 CLIENT_OBJS= \
@@ -150,48 +150,48 @@ default: all
 all: client
 
 libenet/Makefile:
-	cd libenet; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libenet; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 
 libz/Makefile:
-	cd libz; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CHOST="$(PREFIX)" CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CC=$(CC) ./configure --prefix="$(TOPDIR)" --static
+	cd libz; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CHOST="$(PREFIX)" CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CC=$(CC) ./configure --prefix="$(TOPDIR)" --static
 
 libjpeg/Makefile:
-	cd libjpeg; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --without-turbojpeg --enable-shared=no CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libjpeg; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --without-turbojpeg --enable-shared=no CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 
 libpng/Makefile: libz
-	cd libpng; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libpng; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 
 libogg/Makefile:
-	cd libogg; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libogg; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 
 libvorbis/Makefile: libogg
-	cd libvorbis; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --disable-oggtest --enable-docs=no --enable-examples=no CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libvorbis; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --disable-oggtest --enable-docs=no --enable-examples=no CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 
 ifdef WINDOWS
 libSDL/Makefile:
-	cd libSDL; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-video-dummy=no --enable-dummyaudio=no --enable-diskaudio=no --enable-joystick=no --disable-haptic --disable-power --enable-video-opengles=no --enable-render=no --enable-render-d3d=no LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(OPTFLAGS) $(CPUINFO) -DDECLSPEC=\"\""
+	cd libSDL; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-video-dummy=no --enable-dummyaudio=no --enable-diskaudio=no --enable-joystick=no --disable-haptic --disable-power --enable-video-opengles=no --enable-render=no --enable-render-d3d=no LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(OPTFLAGS) $(CPUINFO) -DDECLSPEC=\"\""
 libSDL_mixer/Makefile: libSDL libvorbis
-	cd libSDL_mixer; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-music-cmd=no --enable-music-mod=no --enable-music-mod-modplug=no --enable-music-midi=no --enable-music-fluidsynth-shared=no --enable-music-ogg-tremor=no --enable-music-ogg-shared=no --enable-music-flac=no --enable-music-flac-shared=no --enable-music-mp3=no --enable-music-mp3-mad-gpl=no --disable-sdltest --enable-render=no --enable-render-d3d=no LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS) -DDECLSPEC=\"\"" LIBS="-logg -lvorbis -logg -lm"
+	cd libSDL_mixer; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-music-cmd=no --enable-music-mod=no --enable-music-mod-modplug=no --enable-music-midi=no --enable-music-fluidsynth-shared=no --enable-music-ogg-tremor=no --enable-music-ogg-shared=no --enable-music-flac=no --enable-music-flac-shared=no --enable-music-mp3=no --enable-music-mp3-mad-gpl=no --disable-sdltest --enable-render=no --enable-render-d3d=no LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS) -DDECLSPEC=\"\"" LIBS="-logg -lvorbis -logg -lm"
 libSDL_image/Makefile: libSDL libjpeg libpng
-	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ac_cv_lib_jpeg_jpeg_CreateDecompress=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS) -DDECLSPEC=\"\""
+	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ac_cv_lib_jpeg_jpeg_CreateDecompress=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS) -DDECLSPEC=\"\""
 endif
 
 ifdef LINUX
 libSDL/Makefile:
-	cd libSDL; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-video-dummy=no --enable-dummyaudio=no --enable-diskaudio=no --enable-video-directfb=no --enable-joystick=no --disable-haptic --disable-power --disable-dbus --disable-fusionsound --disable-libudev --disable-alsatest --enable-render=no --enable-video-opengles=no CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libSDL; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-video-dummy=no --enable-dummyaudio=no --enable-diskaudio=no --enable-video-directfb=no --enable-joystick=no --disable-haptic --disable-power --disable-dbus --disable-fusionsound --disable-libudev --disable-alsatest --enable-render=no --enable-video-opengles=no CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 libSDL_mixer/Makefile: libSDL libvorbis
-	cd libSDL_mixer; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-music-cmd=no --enable-music-mod=no --enable-music-mod-modplug=no --enable-music-midi=no --enable-music-fluidsynth-shared=no --enable-music-ogg-tremor=no --enable-music-ogg-shared=no --enable-music-flac=no --enable-music-flac-shared=no --enable-music-mp3=no --enable-music-mp3-mad-gpl=no --disable-sdltest CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" LIBS="-logg -lvorbis -logg -lm"
+	cd libSDL_mixer; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-music-cmd=no --enable-music-mod=no --enable-music-mod-modplug=no --enable-music-midi=no --enable-music-fluidsynth-shared=no --enable-music-ogg-tremor=no --enable-music-ogg-shared=no --enable-music-flac=no --enable-music-flac-shared=no --enable-music-mp3=no --enable-music-mp3-mad-gpl=no --disable-sdltest CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" LIBS="-logg -lvorbis -logg -lm"
 libSDL_image/Makefile: libSDL libjpeg libpng
-	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 endif
 
 ifdef MAC
 libSDL/Makefile:
-	cd libSDL; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-video-dummy=no --enable-dummyaudio=no --enable-diskaudio=no --enable-video-directfb=no --enable-joystick=no --disable-haptic --disable-power --disable-dbus --disable-fusionsound --disable-libudev --enable-render=no --enable-video-opengles=no --enable-video-x11=no --disable-alsatest CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libSDL; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-video-dummy=no --enable-dummyaudio=no --enable-diskaudio=no --enable-video-directfb=no --enable-joystick=no --disable-haptic --disable-power --disable-dbus --disable-fusionsound --disable-libudev --enable-render=no --enable-video-opengles=no --enable-video-x11=no --disable-alsatest CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 libSDL_mixer/Makefile: libSDL libvorbis
-	cd libSDL_mixer; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-music-cmd=no --enable-music-mod=no --enable-music-mod-modplug=no --enable-music-midi=no --enable-music-fluidsynth-shared=no --enable-music-ogg-tremor=no --enable-music-ogg-shared=no --enable-music-flac=no --enable-music-flac-shared=no --enable-music-mp3=no --enable-music-mp3-mad-gpl=no --disable-sdltest CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" LIBS="-logg -lvorbis -logg -lm"
+	cd libSDL_mixer; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-music-cmd=no --enable-music-mod=no --enable-music-mod-modplug=no --enable-music-midi=no --enable-music-fluidsynth-shared=no --enable-music-ogg-tremor=no --enable-music-ogg-shared=no --enable-music-flac=no --enable-music-flac-shared=no --enable-music-mp3=no --enable-music-mp3-mad-gpl=no --disable-sdltest CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" LIBS="-logg -lvorbis -logg -lm"
 libSDL_image/Makefile: libSDL libjpeg libpng
-	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_lib_jpeg_jpeg_CreateDecompress=yes ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-imageio=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest CPPFLAGS="-I$(TOPDIR)/include" CFLAGS="-I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_lib_jpeg_jpeg_CreateDecompress=yes ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-imageio=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 endif
 
 lib%: lib%/Makefile
@@ -248,10 +248,12 @@ ifdef LINUX
 client:	$(CLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o sauer_client $(CLIENT_OBJS) -Wl,--as-needed -Wl,--start-group $(CLIENT_LIBS) -lrt -Wl,--end-group
 	$(STRIP) sauer_client
+ifeq (,$(findstring -ggdb,$(CXXFLAGS)))
 ifneq (, $(findstring x86_64,$(PREFIX)))
 	./remove_symbol_version memcpy@GLIBC_2.2.5
 endif
 	upx sauer_client
+endif
 endif
 
 # DO NOT DELETE

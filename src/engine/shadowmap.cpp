@@ -133,6 +133,7 @@ static struct shadowmaptexture : rendertarget
 
     void doclear()
     {
+        holdscreenlock;
         if(!hasFBO && rtscissor)
         {
             glEnable(GL_SCISSOR_TEST);
@@ -146,6 +147,7 @@ static struct shadowmaptexture : rendertarget
     bool dorender()
     {
         // nvidia bug, must push modelview here, then switch to projection, then back to modelview before can safely modify it
+        holdscreenlock;
         glPushMatrix();
 
         glMatrixMode(GL_PROJECTION);
@@ -242,6 +244,7 @@ static struct shadowmaptexture : rendertarget
     {
         if(shadowmapcasters)
         {
+            holdscreenlock;
             glColorMask(GL_TRUE, GL_FALSE, GL_FALSE, GL_FALSE);
             debugscissor(w, h);
             glColorMask(GL_FALSE, GL_FALSE, GL_TRUE, GL_FALSE);
@@ -403,6 +406,7 @@ void pushshadowmap()
 {
     if(!shadowmap || !shadowmaptex.rendertex) return;
 
+    holdscreenlock;
     if(renderpath==R_FIXEDFUNCTION)
     {
         glBindTexture(GL_TEXTURE_2D, shadowmaptex.rendertex);
@@ -473,6 +477,7 @@ void popshadowmap()
     {
         popscissor();
 
+        holdscreenlock;
         glDisable(GL_TEXTURE_GEN_S);
         glDisable(GL_TEXTURE_GEN_T);
         glDisable(GL_TEXTURE_GEN_R);
@@ -484,6 +489,7 @@ void rendershadowmap()
     if(!shadowmap || (renderpath==R_FIXEDFUNCTION && (!hasSGIDT || !hasSGISH))) return;
 
     // Apple/ATI bug - fixed-function fog state can force software fallback even when fragment program is enabled
+    holdscreenlock;
     glDisable(GL_FOG); 
     shadowmaptex.render(1<<shadowmapsize, 1<<shadowmapsize, renderpath!=R_FIXEDFUNCTION ? blurshadowmap : 0, blursmsigma/100.0f);
     glEnable(GL_FOG);

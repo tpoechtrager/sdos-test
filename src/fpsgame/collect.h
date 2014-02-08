@@ -444,6 +444,7 @@ struct collectclientmode : clientmode
 
     void drawhud(fpsent *d, int w, int h)
     {
+        holdscreenlock;
         if(d->state == CS_ALIVE && d->tokens > 0)
         {
             int x = HICON_X + 3*HICON_STEP + (d->quadmillis ? HICON_SIZE + HICON_SPACE : 0);

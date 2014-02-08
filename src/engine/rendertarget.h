@@ -43,6 +43,7 @@ struct rendertarget
 
     void cleanup(bool fullclean = false)
     {
+        holdscreenlock;
         if(renderfb) { glDeleteFramebuffers_(1, &renderfb); renderfb = 0; }
         if(renderdb) { glDeleteRenderbuffers_(1, &renderdb); renderdb = 0; }
         if(rendertex) { glDeleteTextures(1, &rendertex); rendertex = 0; }
@@ -54,6 +55,7 @@ struct rendertarget
 
     void cleanupblur()
     {
+        holdscreenlock;
         if(blurfb) { glDeleteFramebuffers_(1, &blurfb); blurfb = 0; }
         if(blurtex) { glDeleteTextures(1, &blurtex); blurtex = 0; }
         if(blurdb) { glDeleteRenderbuffers_(1, &blurdb); blurdb = 0; }
@@ -64,6 +66,7 @@ struct rendertarget
     void setupblur()
     {
         if(!hasFBO) return;
+        holdscreenlock;
         if(!blurtex) glGenTextures(1, &blurtex);
         createtexture(blurtex, texw, texh, NULL, 3, 1, colorfmt, target);
 
@@ -86,6 +89,7 @@ struct rendertarget
 
     void setup(int w, int h)
     {
+        holdscreenlock;
         if(hasFBO)
         {
             if(!renderfb) glGenFramebuffers_(1, &renderfb);
@@ -197,6 +201,7 @@ struct rendertarget
 
     virtual void rendertiles()
     {
+        holdscreenlock;
         glBegin(GL_QUADS);
         float wscale = vieww, hscale = viewh;
         if(target!=GL_TEXTURE_RECTANGLE_ARB)
@@ -264,6 +269,7 @@ struct rendertarget
             blursigma = wantsblursigma;
         }
 
+        holdscreenlock;
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
 
@@ -399,6 +405,7 @@ struct rendertarget
  
         if(!shouldrender()) return;
 
+        holdscreenlock;
         if(hasFBO)
         {
             if(blursize && !blurtex) setupblur();
@@ -482,6 +489,7 @@ struct rendertarget
             sw = int(0.5f*(scissorx2 - scissorx1)*w),
             sh = int(0.5f*(scissory2 - scissory1)*h);
         if(flipdebug()) { sy = h - sy; sh = -sh; }
+        holdscreenlock;
         glBegin(lines ? GL_LINE_LOOP : GL_TRIANGLE_STRIP);
         glVertex2i(sx,      sy);
         glVertex2i(sx + sw, sy);
@@ -495,6 +503,7 @@ struct rendertarget
     {
         if(!blurtile) return;
         float vxsz = float(w)/BLURTILES, vysz = float(h)/BLURTILES;
+        holdscreenlock;
         loop(y, BLURTILES+1)
         {
             uint mask = blurtiles[y];
@@ -533,6 +542,7 @@ struct rendertarget
         if(!rendertex) return;
         int w = min(screenw, screenh)/2, h = (w*screenh)/screenw;
         (target==GL_TEXTURE_RECTANGLE_ARB ? rectshader : defaultshader)->set();
+        holdscreenlock;
         glColor3f(1, 1, 1);
         glEnable(target);
         glBindTexture(target, rendertex);

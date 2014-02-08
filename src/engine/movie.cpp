@@ -947,6 +947,7 @@ namespace recorder
     
     void cleanup()
     {
+        holdscreenlock;
         if(scalefb) { glDeleteFramebuffers_(1, &scalefb); scalefb = 0; }
         if(scaletex[0] || scaletex[1]) { glDeleteTextures(2, scaletex); memset(scaletex, 0, sizeof(scaletex)); }
         scalew = scaleh = 0;
@@ -989,6 +990,7 @@ namespace recorder
   
     void drawquad(float tw, float th, float x, float y, float w, float h)
     {
+        holdscreenlock;
         glBegin(GL_TRIANGLE_STRIP);
         glTexCoord2f(0,  0);  glVertex2f(x,   y);
         glTexCoord2f(tw, 0);  glVertex2f(x+w, y);
@@ -1007,6 +1009,7 @@ namespace recorder
         m.format = aviwriter::VID_RGB;
         m.frame = nextframe;
 
+        holdscreenlock;
         glPixelStorei(GL_PACK_ALIGNMENT, texalign(m.video, m.w, 4));
         if(usefbo)
         {
@@ -1142,6 +1145,7 @@ namespace recorder
         if(forceaspect) w = int(ceil(h*forceaspect));
         gettextres(w, h);
 
+        holdscreenlock;
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         glOrtho(0, w, h, 0, -1, 1);

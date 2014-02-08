@@ -725,6 +725,7 @@ namespace game
     void drawicon(int icon, float x, float y, float sz)
     {
         settexture("packages/hud/items.png");
+        holdscreenlock;
         glBegin(GL_TRIANGLE_STRIP);
         float tsz = 0.25f, tx = tsz*(icon%4), ty = tsz*(icon/4);
         glTexCoord2f(tx,     ty);     glVertex2f(x,    y);
@@ -770,6 +771,7 @@ namespace game
     void drawammohud(fpsent *d)
     {
         float x = HICON_X + 2*HICON_STEP, y = HICON_Y, sz = HICON_SIZE;
+        holdscreenlock;
         glPushMatrix();
         glScalef(1/3.2f, 1/3.2f, 1);
         float xup = (x+sz)*3.2f, yup = y*3.2f + 0.1f*sz;
@@ -809,6 +811,7 @@ namespace game
 
     void drawhudicons(fpsent *d)
     {
+        holdscreenlock;
         glPushMatrix();
         glScalef(2, 2, 1);
 
@@ -833,6 +836,7 @@ namespace game
 
     void gameplayhud(int w, int h)
     {
+        holdscreenlock;
         glPushMatrix();
         glScalef(h/1800.0f, h/1800.0f, 1);
 

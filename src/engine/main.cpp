@@ -1,66 +1,9 @@
 // main.cpp: initialisation & main loop
 
 #include "engine.h"
+#include <sched.h>
 
 extern void cleargamma();
-
-SDL_GLContext glcontext = NULL;
-SDL_atomic_t glcontextgen;
-
-struct drawthread
-{
-
-    int elapsedtime, curtime;
-    SDL_mutex *mutex;
-    SDL_cond *donedrawing;
-    SDL_atomic_t swapping;
-    static SDL_mutex *screenmutex;
-
-    drawthread(): elapsedtime(0), curtime(0), mutex(SDL_CreateMutex()), donedrawing(SDL_CreateCond()), myglcontextgen(-1) {
-        swapping.value = 0;
-        SDL_LockMutex(mutex);
-        SDL_CreateThread((SDL_ThreadFunction)spin, "drawer", this);
-    }
-
-    void draw(){ draw(false); }
-
-    void letdraw(){
-        if(SDL_AtomicGet(&swapping)) return;
-        SDL_CondWait(donedrawing, mutex);
-    }
-
-    static void ensureglcontext(int &myglcontextgen){
-        if(SDL_AtomicGet(&glcontextgen) == myglcontextgen) return;
-        myglcontextgen = SDL_AtomicGet(&glcontextgen);
-        SDL_GL_MakeCurrent(screen, glcontext);
-    }
-
-private:
-
-    int myglcontextgen;
-
-    void draw(bool synchronize);
-    static int spin(drawthread *me){
-        while(true) me->draw(true);
-        return 0;
-    }
-
-};
-
-SDL_mutex *drawthread::screenmutex;
-
-struct holdscreenlock
-{
-    const bool active;
-    holdscreenlock(): active(drawthread::screenmutex){
-        if(active && SDL_LockMutex(drawthread::screenmutex)) fatal("Cannot lock screen: %s", SDL_GetError());
-    }
-    ~holdscreenlock(){
-        if(active && SDL_UnlockMutex(drawthread::screenmutex)) fatal("Cannot unlock screen: %s", SDL_GetError());
-    }
-};
-
-#define holdscreenlock holdscreenlock __scrlck
 
 void cleanup()
 {
@@ -125,6 +68,7 @@ void fatal(const char *s, ...)    // failure exit
 
 SDL_Window *screen = NULL;
 int screenw = 0, screenh = 0, desktopw = 0, desktoph = 0;
+SDL_GLContext glcontext = NULL;
 
 int curtime = 0, lastmillis = 1, elapsedtime = 0, totalmillis = 1;
 
@@ -216,6 +160,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
     getbackgroundres(w, h);
     gettextres(w, h);
 
+    holdscreenlock;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(0, w, h, 0, -1, 1);
@@ -402,6 +347,7 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     getbackgroundres(w, h);
     gettextres(w, h);
 
+    holdscreenlock;
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -718,7 +664,6 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
 
     glcontext = SDL_GL_CreateContext(screen);
     if(!glcontext) fatal("failed to create OpenGL context: %s", SDL_GetError());
-    SDL_AtomicAdd(&glcontextgen, 1);
     SDL_GL_SetSwapInterval(vsync ? (vsynctear ? -1 : 1) : 0);
 
     SDL_GetWindowSize(screen, &screenw, &screenh);
@@ -1011,12 +956,31 @@ void swapbuffers(bool overlay)
  
 VAR(menufps, 0, 60, 1000);
 VARP(maxfps, 0, 200, 1000);
-XIDENT(IDF_SWLACC, VARP, multipoll, 0, 0, 2);
+XIDENT(IDF_SWLACC, VARFP, multipoll, -1, 0, 1,
+    if(!multipoll || initing != NOT_INITING) return;
+    holdscreenlock;
+    if(multipoll < 0 && (vsync || !maxfps)) conoutf(CON_WARN, "/multipoll -1 makes sense only with /vsync 0 and /maxfps non-zero. Make sure you really understand what /multipoll does.");
+    if(multipoll > 0 && (!vsync || maxfps)) conoutf(CON_WARN, "/multipoll 1 works best with /vsync 1 and /maxfps 0. Make sure you really understand what /multipoll does.");
+);
+XIDENT(IDF_SWLACC, VARP, multipoll_spinlock, 0, 0, 1);
 
-void limitfps(int &millis, int curmillis)
+bool limitfps_oldmultipoll(){
+    static uint64_t lastdraw = 0;
+    extern uint64_t tick();
+    uint64_t now = tick();
+    if(1000000000ULL/maxfps + lastdraw <= now){
+        lastdraw = now;
+        return true;
+    }
+    return false;
+}
+
+bool limitfps(int &millis, int curmillis)
 {
-    int limit = (mainmenu || minimized) && menufps ? (maxfps ? min(maxfps, menufps) : menufps) : maxfps;
-    if(!limit) return;
+    bool ingame = false;
+    int limit = (mainmenu || minimized) && menufps ? (maxfps ? min(maxfps, menufps) : menufps) : (ingame = true, maxfps);
+    if(!limit) return true;
+    if(multipoll < 0 && ingame) return limitfps_oldmultipoll();
     static int fpserror = 0;
     int delay = 1000/limit - (millis-curmillis);
     if(delay < 0) fpserror = 0;
@@ -1034,6 +998,7 @@ void limitfps(int &millis, int curmillis)
             millis += delay;
         }
     }
+    return true;
 }
 
 #if defined(WIN32) && !defined(_DEBUG) && !defined(__GNUC__)
@@ -1132,57 +1097,28 @@ int getclockmillis()
 
 VAR(numcpus, 1, 1, 16);
 
-void drawthread::draw(bool synchronize){
-
-    if(synchronize) SDL_LockMutex(mutex);
-
-    int start = SDL_GetTicks();
-
-    if(synchronize) ensureglcontext(myglcontextgen);
-
-    updatefps(0);
-    ::curtime = curtime;
-    ::elapsedtime = elapsedtime;
-    curtime = elapsedtime = 0;
-
-    // miscellaneous general game effects
-    recomputecamera();
-    updateparticles();
-    updatesounds();
-
-    if(minimized){
-        if(synchronize){
-            SDL_CondSignal(donedrawing);
-            SDL_UnlockMutex(mutex);
-        }
-        return;
-    }
-
-    inbetweenframes = false;
-    if(mainmenu) gl_drawmainmenu();
-    else gl_drawframe();
-
-    recorder::capture(true);
-    renderedframe = inbetweenframes = true;
-    updatefps(2, SDL_GetTicks() - start);
-
-    if(synchronize){
-        SDL_AtomicSet(&swapping, 1);
-        SDL_CondSignal(donedrawing);
-        SDL_LockMutex(drawthread::screenmutex);
-        SDL_UnlockMutex(mutex);
-    }
-    SDL_GL_SwapWindow(screen);
-    if(multipoll >= 2) glFinish();
-    if(synchronize){
-        SDL_UnlockMutex(drawthread::screenmutex);
-        SDL_AtomicSet(&swapping, 0);
-    }
-
-}
+SDL_mutex *screenlockholder::screenmutex = NULL;
+int screenlockholder::holdrecursion = 0;
 
 #ifdef __APPLE__
+
+#include <mach/mach_time.h>
+uint64_t tick(){
+        static mach_timebase_info_data_t tb;
+        if(!tb.denom) mach_timebase_info(&tb);
+        return (mach_absolute_time()*uint64_t(tb.numer))/tb.denom;
+}
+
 #define main SDL_main
+
+#else
+
+uint64_t tick(){
+    timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec * 1000000000ULL + t.tv_nsec;
+}
+
 #endif
 
 int main(int argc, char **argv)
@@ -1284,7 +1220,7 @@ int main(int argc, char **argv)
 
         if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|SDL_INIT_AUDIO|par)<0) fatal("Unable to initialize SDL: %s", SDL_GetError());
     }
-    drawthread::screenmutex = SDL_CreateMutex();
+    screenlockholder::screenmutex = SDL_CreateMutex();
     
     logoutf("init: net");
     if(enet_initialize()<0) fatal("Unable to initialise network module");
@@ -1385,15 +1321,66 @@ int main(int argc, char **argv)
 
     conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.2));
 
-    int myglcontextgen = SDL_AtomicGet(&glcontextgen);
-    drawthread drawer;
+    struct swapperthread
+    {
+
+        swapperthread(): doswap(SDL_CreateSemaphore(0)), locktaken(SDL_CreateSemaphore(0)) {
+            SDL_AtomicSet(&swapping_value, 0);
+            SDL_CreateThread((SDL_ThreadFunction)spin_, "drawer", this);
+        }
+
+        void swap(bool isswaper = false){
+            //grab the screen first to prevent the master thread from drawing next frame stuff on it
+            holdscreenlock;
+            SDL_AtomicSet(&swapping_value, 1);
+            if(isswaper) SDL_SemPost(locktaken);
+            SDL_GL_SwapWindow(screen);
+            //do this to concentrate OpenGL work in the swapper thread
+            if(isswaper) glFinish();
+            SDL_AtomicSet(&swapping_value, 0);
+        }
+
+        void letswap(){
+            SDL_SemPost(doswap);
+            while(!green(multipoll_spinlock ? SDL_SemTryWait(locktaken) : SDL_SemWait(locktaken))) sched_yield();
+        }
+
+        bool swapping(){
+            return SDL_AtomicGet(&swapping_value);
+        }
+
+    private:
+
+        SDL_atomic_t swapping_value;
+        SDL_sem *doswap, *locktaken;
+
+        static bool green(int err){
+            if(err == SDL_MUTEX_TIMEDOUT) return false;
+            if(!err) return true;
+            fprintf(stderr, "Fatal error waiting for a semaphore: %s", SDL_GetError());
+            exit(1);
+        }
+
+        void spin(){
+            while(true){
+                while(!green(multipoll_spinlock && !minimized && !mainmenu ? SDL_SemTryWait(doswap) : SDL_SemWait(doswap))) sched_yield();
+                swap(true);
+            }
+        }
+        static int spin_(swapperthread *me){
+            me->spin();
+            return 0;
+        }
+
+    } swapper;
 
     for(;;)
     {
+        static int drawelapsedtime = 0, drawcurtime = 0;
         int millis = getclockmillis();
-        limitfps(millis, totalmillis);
+        bool draw = limitfps(millis, totalmillis);
         elapsedtime = millis - totalmillis;
-        drawer.elapsedtime += elapsedtime;
+        drawelapsedtime += elapsedtime;
         static int timeerr = 0;
         int scaledtime = game::scaletime(elapsedtime) + timeerr;
         curtime = scaledtime/100;
@@ -1401,11 +1388,10 @@ int main(int argc, char **argv)
         if(!multiplayer(false) && curtime>200) curtime = 200;
         if(game::ispaused()) curtime = 0;
 		lastmillis += curtime;
-		drawer.curtime += curtime;
+		drawcurtime += curtime;
         totalmillis = millis;
         updatetime();
  
-        drawthread::ensureglcontext(myglcontextgen);
         checkinput();
         menuprocess();
         tryedit();
@@ -1418,8 +1404,32 @@ int main(int argc, char **argv)
 
         updatefps(1);
 
-        if(!minimized && !mainmenu && multipoll) drawer.letdraw();
-        else drawer.draw();
+        if((multipoll < 0 && !draw) || (multipoll > 0 && swapper.swapping())) continue;
+
+        uint64_t start = tick();
+
+        updatefps(0);
+        curtime = drawcurtime;
+        elapsedtime = drawelapsedtime;
+        drawcurtime = drawelapsedtime = 0;
+
+        // miscellaneous general game effects
+        recomputecamera();
+        updateparticles();
+        updatesounds();
+
+        if(minimized) continue;
+
+        inbetweenframes = false;
+        if(mainmenu) gl_drawmainmenu();
+        else gl_drawframe();
+
+        recorder::capture(true);
+        renderedframe = inbetweenframes = true;
+
+        if(!mainmenu && multipoll > 0) swapper.letswap();
+        else swapper.swap();
+        updatefps(2, (tick() - start)/1000);
 
     }
     

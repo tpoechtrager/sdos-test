@@ -223,6 +223,34 @@ extern void renderentring(const extentity &e, float radius, int axis = 0);
 
 // main
 extern void fatal(const char *s, ...) PRINTFARGS(1, 2);
+extern SDL_GLContext glcontext;
+extern SDL_Window *screen;
+struct screenlockholder
+{
+    screenlockholder(): dolock(screenmutex){
+        if(!dolock) return;
+        if(SDL_LockMutex(screenmutex)){
+            fprintf(stderr, "Failed to lock screen mutex: %s\n", SDL_GetError());
+            exit(1);
+        }
+        if(!holdrecursion) SDL_GL_MakeCurrent(screen, glcontext);
+        holdrecursion++;
+    }
+    ~screenlockholder(){
+        if(!dolock) return;
+        holdrecursion--;
+        if(SDL_UnlockMutex(screenmutex)){
+            fprintf(stderr, "Failed to unlock screen mutex: %s\n", SDL_GetError());
+            exit(1);
+        }
+    }
+private:
+    const bool dolock;
+    static SDL_mutex *screenmutex;
+    static int holdrecursion;
+    friend int main(int argc, char **argv);
+};
+#define holdscreenlock screenlockholder __scrlck
 
 // rendertext
 extern bool setfont(const char *name);

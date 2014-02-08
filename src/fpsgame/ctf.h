@@ -496,6 +496,7 @@ struct ctfclientmode : clientmode
 
     void drawhud(fpsent *d, int w, int h)
     {
+        holdscreenlock;
         if(d->state == CS_ALIVE)
         {
             loopv(flags) if(flags[i].owner == d)

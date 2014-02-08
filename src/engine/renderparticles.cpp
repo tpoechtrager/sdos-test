@@ -334,6 +334,7 @@ struct listrenderer : partrenderer
         if(texname)
         {
             if(!tex) tex = textureload(texname, texclamp);
+            holdscreenlock;
             glBindTexture(GL_TEXTURE_2D, tex->id);
         }
         
@@ -373,6 +374,7 @@ struct meterrenderer : listrenderer
 
     void startrender()
     {
+         holdscreenlock;
          glDisable(GL_BLEND);
          glDisable(GL_TEXTURE_2D);
          particlenotextureshader->set();
@@ -380,6 +382,7 @@ struct meterrenderer : listrenderer
 
     void endrender()
     {
+         holdscreenlock;
          glEnable(GL_BLEND);
          glEnable(GL_TEXTURE_2D);
          particleshader->set();
@@ -389,6 +392,7 @@ struct meterrenderer : listrenderer
     {
         int basetype = type&0xFF;
 
+        holdscreenlock;
         glPushMatrix();
         float scale = p->size/80.0f;
         GLfloat billboardmatrix[16] =
@@ -480,6 +484,7 @@ struct textrenderer : listrenderer
 
     void renderpart(listparticle *p, const vec &o, const vec &d, int blend, int ts, uchar *color)
     {
+        holdscreenlock;
         glPushMatrix();
         float scale = p->size/80.0f;
         GLfloat billboardmatrix[16] =
@@ -786,6 +791,7 @@ struct varenderer : partrenderer
     void render()
     {   
         if(!tex) tex = textureload(texname, texclamp);
+        holdscreenlock;
         glBindTexture(GL_TEXTURE_2D, tex->id);
         glVertexPointer(3, GL_FLOAT, sizeof(partvert), &verts->pos);
         glTexCoordPointer(2, GL_FLOAT, sizeof(partvert), &verts->u);
@@ -926,6 +932,7 @@ void renderparticles(bool mainpass)
 {
     canstep = mainpass;
     //want to debug BEFORE the lastpass render (that would delete particles)
+    holdscreenlock;
     if(debugparticles && !glaring && !reflecting && !refracting) 
     {
         int n = sizeof(parts)/sizeof(parts[0]);
