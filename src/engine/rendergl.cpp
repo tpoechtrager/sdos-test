@@ -512,7 +512,7 @@ void gl_checkextensions()
 #endif
 #ifdef WIN32
             intel_immediate_bug = 1;
-            intel_vertexarray_bug = 1;
+            //intel_vertexarray_bug = 1;
 #endif
         }
 

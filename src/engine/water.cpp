@@ -1133,7 +1133,7 @@ void queryreflections()
         glEnable(GL_CULL_FACE);
     }
 
-	glFlush();
+	//glFlush();
 }
 
 VARP(maxreflect, 1, 1, 8);

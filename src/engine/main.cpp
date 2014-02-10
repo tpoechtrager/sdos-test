@@ -97,8 +97,9 @@ VAR(colorbits, 0, 0, 32);
 VARF(depthbits, 0, 0, 32, initwarning("depth-buffer precision"));
 VARF(stencilbits, 0, 0, 32, initwarning("stencil-buffer precision"));
 VARF(fsaa, -1, -1, 16, initwarning("anti-aliasing"));
-VARF(vsync, 0, 0, 1, initwarning("vsync"));
-XIDENT(IDF_SWLACC, VARFP, vsynctear, 0, 0, 1, if(vsync) initwarning("vsync"));
+extern void updatevsync();
+VARF(vsync, 0, 0, 1, updatevsync());
+XIDENT(IDF_SWLACC, VARFP, vsynctear, 0, 0, 1, if(vsync) updatevsync());
 
 void writeinitcfg()
 {
@@ -661,12 +662,21 @@ void setupscreen(int &useddepthbits, int &usedfsaa)
 
     glcontext = SDL_GL_CreateContext(screen);
     if(!glcontext) fatal("failed to create OpenGL context: %s", SDL_GetError());
-    SDL_GL_SetSwapInterval(vsync ? (vsynctear ? -1 : 1) : 0);
+    updatevsync();
 
     SDL_GetWindowSize(screen, &screenw, &screenh);
 
     useddepthbits = config&1 ? depthbits : 0;
     usedfsaa = config&4 ? fsaa : 0;
+}
+
+void updatevsync(){
+       if(!glcontext) return;
+       holdscreenlock;
+       if(!SDL_GL_SetSwapInterval(vsync ? (vsynctear ? -1 : 1) : 0)) return;
+       if(vsync && vsynctear) conoutf("vsynctear not supported, or you need to restart sauer to apply changes.");
+       else if(vsync) conoutf("vsynctear not supported, or you need to restart sauer to apply changes.");
+       else conoutf("You need to restart sauer to disable vsync.");
 }
 
 void resetgl()
@@ -958,6 +968,7 @@ XIDENT(IDF_SWLACC, VARFP, multipoll, -1, 0, 1,
     if(multipoll > 0 && (!vsync || maxfps)) conoutf(CON_WARN, "/multipoll 1 works best with /vsync 1 and /maxfps 0. Make sure you really understand what /multipoll does.");
 );
 XIDENT(IDF_SWLACC, VARP, multipoll_spinlock, 0, 0, 1);
+XIDENT(IDF_SWLACC, VARP, nanodelay, 0, 0, 10000000);
 
 bool limitfps_oldmultipoll(){
     static uint64_t lastdraw = 0;
@@ -1371,6 +1382,18 @@ int main(int argc, char **argv)
 
     for(;;)
     {
+        static uint64_t lastloop = 0;
+        if(multipoll) while(true){
+            uint64_t now = tick();
+            if(now - lastloop >= uint64_t(nanodelay)){
+                lastloop = now;
+                break;
+            }
+            timespec t, _;
+            t.tv_sec = 0;
+            t.tv_nsec = (nanodelay - (now - lastloop))/2;
+            nanosleep(&t, &_);
+        }
         static int drawelapsedtime = 0, drawcurtime = 0;
         int millis = getclockmillis();
         bool draw = limitfps(millis, totalmillis);
