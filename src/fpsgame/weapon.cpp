@@ -205,12 +205,19 @@ namespace game
         adddecal(DECAL_BLOOD, vec(b->o).sub(vec(surface).mul(b->radius)), surface, 2.96f/b->bounces, bvec(0x60, 0xFF, 0xFF), rnd(4));
     }
         
+XIDENT(IDF_SWLACC, VARP, smokefps, 0, 80, 200);
     void updatebouncers(int time)
     {
+        static int lastbouncersmoke = -1000;
+        bool dosmoke = false;
+        if(smokefps && lastmillis - lastbouncersmoke >= 1000/smokefps){
+            lastbouncersmoke = lastmillis;
+            dosmoke = true;
+        }
         loopv(bouncers)
         {
             bouncer &bnc = *bouncers[i];
-            if(bnc.bouncetype==BNC_GRENADE && bnc.vel.magnitude() > 50.0f)
+            if(dosmoke && bnc.bouncetype==BNC_GRENADE && bnc.vel.magnitude() > 50.0f)
             {
                 vec pos(bnc.o);
                 pos.add(vec(bnc.offset).mul(bnc.offsetmillis/float(OFFSETMILLIS)));
@@ -496,6 +503,12 @@ namespace game
 
     void updateprojectiles(int time)
     {
+        static int lastbouncersmoke = -1000;
+        bool dosmoke = false;
+        if(smokefps && lastmillis - lastbouncersmoke >= 1000/smokefps){
+            lastbouncersmoke = lastmillis;
+            dosmoke = true;
+        }
         loopv(projs)
         {
             projectile &p = projs[i];
@@ -534,17 +547,19 @@ namespace game
                 {
                     vec pos(v);
                     pos.add(vec(p.offset).mul(p.offsetmillis/float(OFFSETMILLIS)));
-                    if(guns[p.gun].part)
-                    {
-                         regular_particle_splash(PART_SMOKE, 2, 300, pos, 0x404040, 0.6f, 150, -20);
-                         int color = 0xFFFFFF;
-                         switch(guns[p.gun].part)
-                         {
-                            case PART_FIREBALL1: color = 0xFFC8C8; break;
-                         }
-                         particle_splash(guns[p.gun].part, 1, 1, pos, color, 4.8f, 150, 20);
+                    if(dosmoke){
+                        if(guns[p.gun].part)
+                        {
+                            regular_particle_splash(PART_SMOKE, 2, 300, pos, 0x404040, 0.6f, 150, -20);
+                            int color = 0xFFFFFF;
+                            switch(guns[p.gun].part)
+                            {
+                                case PART_FIREBALL1: color = 0xFFC8C8; break;
+                            }
+                            particle_splash(guns[p.gun].part, 1, 1, pos, color, 4.8f, 150, 20);
+                        }
+                        else regular_particle_splash(PART_SMOKE, 2, 300, pos, 0x404040, 2.4f, 50, -20);
                     }
-                    else regular_particle_splash(PART_SMOKE, 2, 300, pos, 0x404040, 2.4f, 50, -20);
                 }
             }
             if(exploded)
