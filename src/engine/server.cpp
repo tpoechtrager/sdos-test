@@ -627,7 +627,7 @@ void serverslice(bool dedicated, uint timeout)   // main server update, called f
     }
        
     // below is network only
-
+/* will never be called in sdos
     if(dedicated) 
     {
         int millis = (int)enet_time_get();
@@ -641,6 +641,7 @@ void serverslice(bool dedicated, uint timeout)   // main server update, called f
         totalmillis = millis;
         updatetime();
     }
+*/
     server::serverupdate();
 
     flushmasteroutput();
@@ -1008,6 +1009,7 @@ static bool dedicatedserver = false;
 
 bool isdedicatedserver() { return dedicatedserver; }
 
+/* never called in sdos
 void rundedicatedserver()
 {
     dedicatedserver = true;
@@ -1030,6 +1032,7 @@ void rundedicatedserver()
 #endif
     dedicatedserver = false;
 }
+*/
 
 bool servererror(bool dedicated, const char *desc)
 {
@@ -1097,9 +1100,9 @@ void initserver(bool listen, bool dedicated)
     {
         dedicatedserver = dedicated;
         updatemasterserver();
-        if(dedicated) rundedicatedserver(); // never returns
+        //if(dedicated) rundedicatedserver(); // never returns
 #ifndef STANDALONE
-        else conoutf("listen server started");
+        conoutf("listen server started");
 #endif
     }
 }

@@ -69,7 +69,7 @@ SDL_Window *screen = NULL;
 int screenw = 0, screenh = 0, desktopw = 0, desktoph = 0;
 SDL_GLContext glcontext = NULL;
 
-int curtime = 0, lastmillis = 1, elapsedtime = 0, totalmillis = 1;
+int lastmillis = 1, totalmillis = 1;
 
 dynent *player = NULL;
 
@@ -965,46 +965,64 @@ XIDENT(IDF_SWLACC, VARFP, multipoll, -1, 0, 1,
     if(!multipoll || initing != NOT_INITING) return;
     holdscreenlock;
     if(multipoll < 0 && (vsync || !maxfps)) conoutf(CON_WARN, "/multipoll -1 makes sense only with /vsync 0 and /maxfps non-zero. Make sure you really understand what /multipoll does.");
-    if(multipoll > 0 && (!vsync || maxfps)) conoutf(CON_WARN, "/multipoll 1 works best with /vsync 1 and /maxfps 0. Make sure you really understand what /multipoll does.");
 );
 XIDENT(IDF_SWLACC, VARP, multipoll_spinlock, 0, 0, 1);
 XIDENT(IDF_SWLACC, VARP, nanodelay, 0, 0, 10000000);
 
-bool limitfps_oldmultipoll(){
-    static uint64_t lastdraw = 0;
-    extern uint64_t tick();
-    uint64_t now = tick();
-    if(1000000000ULL/maxfps + lastdraw <= now){
-        lastdraw = now;
-        return true;
-    }
-    return false;
+#ifdef __APPLE__
+
+#include <mach/mach_time.h>
+uint64_t tick(){
+        static mach_timebase_info_data_t tb;
+        if(!tb.denom) mach_timebase_info(&tb);
+        return (mach_absolute_time()*uint64_t(tb.numer))/tb.denom;
 }
 
-bool limitfps(int &millis, int curmillis)
+#define main SDL_main
+
+#else
+
+uint64_t tick(){
+    timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec * 1000000000ULL + t.tv_nsec;
+}
+
+#endif
+
+bool limitfps(uint64_t &tick_now)
 {
-    bool ingame = false;
-    int limit = (mainmenu || minimized) && menufps ? (maxfps ? min(maxfps, menufps) : menufps) : (ingame = true, maxfps);
-    if(!limit) return true;
-    if(multipoll < 0 && ingame) return limitfps_oldmultipoll();
-    static int fpserror = 0;
-    int delay = 1000/limit - (millis-curmillis);
-    if(delay < 0) fpserror = 0;
-    else
-    {
-        fpserror += 1000%limit;
-        if(fpserror >= limit)
-        {
-            ++delay;
-            fpserror -= limit;
+    static uint64_t lastdraw = 0, lastrefresh = 0;
+    int fpslimit = (mainmenu || minimized) && menufps ? (maxfps ? min(maxfps, menufps) : menufps) : maxfps;
+    uint64_t nextdraw = (fpslimit ? 1000000000ULL / fpslimit : 0) + lastdraw;
+    bool dodraw;
+    timespec t, _;
+    t.tv_sec = 0;
+    if(multipoll){
+        if(fpslimit && nextdraw <= tick_now){
+            dodraw = true;
+            goto frame;
         }
-        if(delay > 0)
-        {
-            SDL_Delay(delay);
-            millis += delay;
-        }
+        dodraw = fpslimit == 0;
+        uint64_t nextrefresh = lastrefresh + nanodelay;
+        if(nextrefresh <= tick_now) goto frame;
+        t.tv_nsec = nextrefresh - tick_now;
+        nanosleep(&t, &_);
+        return limitfps(tick_now = tick());
     }
-    return true;
+    else{
+        if(nextdraw <= tick_now){
+            dodraw = true;
+            goto frame;
+        }
+        t.tv_nsec = nextdraw - tick_now;
+        nanosleep(&t, &_);
+        return limitfps(tick_now = tick());
+    }
+frame:
+    lastrefresh = tick_now;
+    if(dodraw) lastdraw = tick_now;
+    return dodraw;
 }
 
 #if defined(WIN32) && !defined(_DEBUG) && !defined(__GNUC__)
@@ -1107,24 +1125,7 @@ SDL_mutex *screenlockholder::screenmutex = NULL;
 int screenlockholder::holdrecursion = 0;
 
 #ifdef __APPLE__
-
-#include <mach/mach_time.h>
-uint64_t tick(){
-        static mach_timebase_info_data_t tb;
-        if(!tb.denom) mach_timebase_info(&tb);
-        return (mach_absolute_time()*uint64_t(tb.numer))/tb.denom;
-}
-
 #define main SDL_main
-
-#else
-
-uint64_t tick(){
-    timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return t.tv_sec * 1000000000ULL + t.tv_nsec;
-}
-
 #endif
 
 int main(int argc, char **argv)
@@ -1380,41 +1381,24 @@ int main(int argc, char **argv)
 
     } swapper;
 
+    uint64_t tick_last = tick();
+    double finelastmillis = lastmillis, finetotalmillis = totalmillis;
+    bool drawrequested = false;
     for(;;)
     {
-        static uint64_t lastloop = 0;
-        if(multipoll) while(true){
-            uint64_t now = tick();
-            if(now - lastloop >= uint64_t(nanodelay)){
-                lastloop = now;
-                break;
-            }
-            timespec t, _;
-            t.tv_sec = 0;
-            t.tv_nsec = (nanodelay - (now - lastloop))/2;
-            nanosleep(&t, &_);
-        }
-        static int drawelapsedtime = 0, drawcurtime = 0;
-        int millis = getclockmillis();
-        bool draw = limitfps(millis, totalmillis);
-        elapsedtime = millis - totalmillis;
-        drawelapsedtime += elapsedtime;
-        static int timeerr = 0;
-        int scaledtime = game::scaletime(elapsedtime) + timeerr;
-        curtime = scaledtime/100;
-        timeerr = scaledtime%100;
-        if(!multiplayer(false) && curtime>200) curtime = 200;
-        if(game::ispaused()) curtime = 0;
-		lastmillis += curtime;
-		drawcurtime += curtime;
-        totalmillis = millis;
+        uint64_t tick_now = tick();
+        drawrequested |= limitfps(tick_now);
+        double elapsedmillis = double(tick_now - tick_last)/1000000;
+        tick_last = tick_now;
+        totalmillis = (finetotalmillis += elapsedmillis);
+        lastmillis = (finelastmillis += game::ispaused() ? 0 : game::scaletime(1) * elapsedmillis / 100);
         updatetime();
  
         checkinput();
         menuprocess();
         tryedit();
 
-        if(lastmillis) game::updateworld();
+        game::updateworld();
 
         checksleep(lastmillis);
 
@@ -1422,14 +1406,12 @@ int main(int argc, char **argv)
 
         updatefps(1);
 
-        if((multipoll < 0 && !draw) || (multipoll > 0 && swapper.swapping())) continue;
+        if(!drawrequested || swapper.swapping()) continue;
+        drawrequested = false;
 
         uint64_t start = tick();
 
         updatefps(0);
-        curtime = drawcurtime;
-        elapsedtime = drawelapsedtime;
-        drawcurtime = drawelapsedtime = 0;
 
         // miscellaneous general game effects
         recomputecamera();

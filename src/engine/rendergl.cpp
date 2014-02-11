@@ -891,6 +891,7 @@ void disablezoom()
 
 void computezoom()
 {
+    emulateelapsedtime;
     if(!zoom) { zoomprogress = 0; curfov = fov; curavatarfov = avatarfov; return; }
     if(zoom > 0) zoomprogress = zoominvel ? min(zoomprogress + float(elapsedtime) / zoominvel, 1.0f) : 1;
     else
@@ -945,7 +946,8 @@ void mousemove(int dx, int dy)
             curaccel = zoomaccel;
         }
     }
-    if(curaccel && curtime && (dx || dy)) cursens += curaccel * sqrtf(dx*dx + dy*dy)/curtime;
+    emulateelapsedtime;
+    if(curaccel && (dx || dy)) cursens += curaccel * sqrtf(dx*dx + dy*dy)/max(elapsedtime, 1);
     cursens /= 33.0f*sensitivityscale/sdl2_sensitivity_adjust;
     camera1->yaw += dx*cursens;
     camera1->pitch -= dy*cursens*(invmouse ? -1 : 1);
@@ -2200,6 +2202,7 @@ void drawdamagecompass(int w, int h)
     int dirs = 0;
     float size = damagecompasssize/100.0f*min(h, w)/2.0f;
     holdscreenlock;
+    emulatecurtime;
     loopi(8) if(dcompass[i]>0)
     {
         if(!dirs)
