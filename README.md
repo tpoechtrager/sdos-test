@@ -72,6 +72,12 @@ testing. Reports of oddities or bad functioning are important, but
 - `showfps 1` now uses a different internal logic: fps counting should
   be more precise and responsive, but the downside is that the refresh
   rate is now fixed to one second. Also, `showfpsrange 1` has no effect.
+- The original client draws one smoke "flake" for each drawn frame in the
+  trail of grenades and rockets. This means that a higher fps degrades
+  visibility. There is now a variable `smokefps [0-200]` (default 80) which
+  controls how many flakes can be drawn, for each trail, per second. 
+- `explosions 0|1`: you can disable the explosion ball for grenades and
+  rockets.
 
 ## Bonus pro setting `multipoll -1|0|1`: low latency input. ##
 
