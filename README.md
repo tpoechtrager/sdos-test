@@ -108,7 +108,7 @@ testing. Reports of oddities or bad functioning are important, but
   - `/multipoll +1`: a separate thread handles flushing the graphic card
     commands and waiting for `vsync`, the main thread refreshes the engines
     continuously and when the other thread signals availability a frame is
-    drawn. Pros: doesn't need `maxfps` (set it to 0), works very well with and
+    drawn. Pros: doesn't need `maxfps` (you can also disable it), works very well with and
     without `vsync`. With it, you get the advantages of multipoll  and no
     tearing at all, and you minimize the number of frames drawn (cfr maximum
     input lag and draw millis), without you may get a smaller value of draw
