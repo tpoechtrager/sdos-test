@@ -1326,7 +1326,7 @@ int main(int argc, char **argv)
     inputgrab(grabinput = true);
     ignoremousemotion();
 
-    conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.2.3));
+    conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.3));
 
     struct swapperthread
     {
