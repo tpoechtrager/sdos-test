@@ -1,5 +1,7 @@
 #include "game.h"
 
+extern int multipoll;
+
 namespace game
 {
     bool intermission = false;
@@ -234,6 +236,16 @@ namespace game
     {
         emulatecurtime;
         if(!maptime) { maptime = lastmillis; maprealtime = totalmillis; return; }
+        if(!curtime)
+        {
+            gets2c();
+            if(player1->clientnum>=0)
+            {
+                if(multipoll && player1->state == CS_ALIVE) shoot(player1, worldpos);
+                c2sinfo();
+            }
+            return;
+        }
 
         physicsframe();
         ai::navigate();

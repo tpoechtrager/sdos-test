@@ -2455,18 +2455,8 @@ void gl_drawhud()
             int roffset = 0;
             if(showfps)
             {
-                int inputfps = getfps(1);
-                const char* suffix = "";
-                if(inputfps>1500){
-                    inputfps/=1000;
-                    suffix = "K";
-                }
-                if(inputfps>1500){
-                    inputfps/=1000;
-                    suffix = "M";
-                }
                 int decimilli = getfps(2)/100;
-                draw_textf("fps %d draw %d.%dms ifps %d%s", conw-14*FONTH, conh-FONTH*3/2, getfps(0), decimilli/10, decimilli%10, inputfps, suffix);
+                draw_textf("fps %d draw %d.%dms ifps %d", conw-14*FONTH, conh-FONTH*3/2, getfps(0), decimilli/10, decimilli%10, getfps(1));
                 roffset += FONTH;
             }
 

@@ -966,8 +966,7 @@ XIDENT(IDF_SWLACC, VARFP, multipoll, -1, 0, 1,
     holdscreenlock;
     if(multipoll < 0 && (vsync || !maxfps)) conoutf(CON_WARN, "/multipoll -1 makes sense only with /vsync 0 and /maxfps non-zero. Make sure you really understand what /multipoll does.");
 );
-XIDENT(IDF_SWLACC, VARP, multipoll_spinlock, 0, 0, 1);
-XIDENT(IDF_SWLACC, VARP, nanodelay, 0, 0, 10000000);
+XIDENT(IDF_SWLACC, VAR, nanodelay, 0, 50000, 999999);
 
 #ifdef __APPLE__
 
@@ -1326,7 +1325,7 @@ int main(int argc, char **argv)
     inputgrab(grabinput = true);
     ignoremousemotion();
 
-    conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.3));
+    conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.3.1));
 
     struct swapperthread
     {
@@ -1336,20 +1335,23 @@ int main(int argc, char **argv)
             SDL_CreateThread((SDL_ThreadFunction)spin_, "drawer", this);
         }
 
-        void swap(bool isswaper = false){
-            //grab the screen first to prevent the master thread from drawing next frame stuff on it
-            holdscreenlock;
-            SDL_AtomicSet(&swapping_value, 1);
-            if(isswaper) SDL_SemPost(locktaken);
-            SDL_GL_SwapWindow(screen);
-            //do this to concentrate OpenGL work in the swapper thread
-            if(isswaper) glFinish();
+        void swap(bool isswapper = false){
+            {
+                //grab the screen first to prevent the master thread from drawing next frame stuff on it
+                holdscreenlock;
+                SDL_AtomicSet(&swapping_value, 1);
+                if(isswapper) SDL_SemPost(locktaken);
+                SDL_GL_SwapWindow(screen);
+                //do this to concentrate OpenGL work in the swapper thread
+                if(isswapper) glFinish();
+                //release the lock first to avoid mutex contention
+            }
             SDL_AtomicSet(&swapping_value, 0);
         }
 
         void letswap(){
             SDL_SemPost(doswap);
-            while(!green(multipoll_spinlock ? SDL_SemTryWait(locktaken) : SDL_SemWait(locktaken))) sched_yield();
+            while(!green(SDL_SemWait(locktaken)));
         }
 
         bool swapping(){
@@ -1370,7 +1372,7 @@ int main(int argc, char **argv)
 
         void spin(){
             while(true){
-                while(!green(multipoll_spinlock && !minimized && !mainmenu ? SDL_SemTryWait(doswap) : SDL_SemWait(doswap))) sched_yield();
+                while(!green(SDL_SemWait(doswap)));
                 swap(true);
             }
         }
@@ -1391,7 +1393,9 @@ int main(int argc, char **argv)
         double elapsedmillis = double(tick_now - tick_last)/1000000;
         tick_last = tick_now;
         totalmillis = (finetotalmillis += elapsedmillis);
+        int oldlastmillis = lastmillis;
         lastmillis = (finelastmillis += game::ispaused() ? 0 : game::scaletime(1) * elapsedmillis / 100);
+        bool lightupdate = oldlastmillis == lastmillis;
         updatetime();
  
         checkinput();
@@ -1404,9 +1408,12 @@ int main(int argc, char **argv)
 
         serverslice(false, 0);
 
-        updatefps(1);
+        if(!lightupdate) updatefps(1);
 
-        if(!drawrequested || swapper.swapping()) continue;
+        if(!drawrequested || swapper.swapping()){
+            if(lightupdate && !nanodelay) sched_yield();
+            continue;
+        }
         drawrequested = false;
 
         uint64_t start = tick();
