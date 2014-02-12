@@ -2571,3 +2571,101 @@ void gl_drawhud()
 }
 
 
+static enum djob { DRAWER_NONE, DRAWER_DRAW, DRAWER_ACQUIRE, DRAWER_RELEASE } job = DRAWER_NONE;
+static SDL_mutex *screenmutex = NULL;
+static bool _keepgl;
+static SDL_atomic_t _swapping;
+static SDL_sem *dojob, *donejob;
+static SDL_threadID drawerID;
+
+extern SDL_GLContext glcontext;
+static int drawerfn(void *){
+    while(true){
+        SDL_SemWait(dojob);
+        if(job == DRAWER_DRAW) drawer::draw();
+        else{
+            job == DRAWER_ACQUIRE ? SDL_GL_MakeCurrent(screen, glcontext) : SDL_GL_MakeCurrent(NULL, NULL);
+            job = DRAWER_NONE;
+            SDL_SemPost(donejob);
+        }
+    }
+    return 0;
+}
+
+extern int multipoll;
+void initializedrawer(){
+    screenmutex = SDL_CreateMutex();
+    SDL_AtomicSet(&_swapping, 0);
+    _keepgl = multipoll == 1;
+    dojob = SDL_CreateSemaphore(0);
+    donejob = SDL_CreateSemaphore(0);
+    drawerID = SDL_GetThreadID(SDL_CreateThread(drawerfn, "drawer", NULL));
+}
+
+static bool isdrawer(){
+    return SDL_GetThreadID(NULL) == drawerID;
+}
+
+bool drawer::swapping(){
+    return SDL_AtomicGet(&_swapping);
+}
+
+static void dispatch_job(djob j){
+    job = j;
+    SDL_SemPost(dojob);
+    SDL_SemWait(donejob);
+}
+
+void drawer::keepgl(bool on){
+    holdscreenlock;
+    _keepgl = on;
+}
+
+void drawer::letdraw(){
+    dispatch_job(DRAWER_DRAW);
+}
+
+void drawer::draw(){
+    {
+        //grab the screen first to prevent the master thread from drawing next frame stuff on it
+        holdscreenlock;
+
+        inbetweenframes = false;
+        if(mainmenu) gl_drawmainmenu();
+        else gl_drawframe();
+
+        recorder::capture(true);
+        renderedframe = inbetweenframes = true;
+
+        if(isdrawer()){
+            SDL_AtomicSet(&_swapping, 1);
+            job = DRAWER_NONE;
+            SDL_SemPost(donejob);
+        }
+        SDL_GL_SwapWindow(screen);
+        //do this to concentrate OpenGL work in the swapper thread
+        if(isdrawer()){
+            glClear(GL_DEPTH_BUFFER_BIT);   //for some reason glFinish returns before the buffer is really available
+            glFinish();
+        }
+        //release the lock first to avoid mutex contention
+    }
+    if(isdrawer()) SDL_AtomicSet(&_swapping, 0);
+}
+
+static int recursion = 0;
+drawer::drawer(){
+    if(!screenmutex) initializedrawer();
+    SDL_LockMutex(screenmutex);
+    if(recursion++) return;
+    if(_keepgl && !isdrawer()) dispatch_job(DRAWER_RELEASE);
+    SDL_GL_MakeCurrent(screen, glcontext);
+}
+
+drawer::~drawer(){
+    if(!--recursion && _keepgl && !isdrawer()){
+        SDL_GL_MakeCurrent(NULL, NULL);
+        dispatch_job(DRAWER_ACQUIRE);
+    }
+    SDL_UnlockMutex(screenmutex);
+}

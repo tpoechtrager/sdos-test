@@ -962,9 +962,8 @@ void swapbuffers(bool overlay)
 VAR(menufps, 0, 60, 1000);
 VARP(maxfps, 0, 200, 1000);
 XIDENT(IDF_SWLACC, VARFP, multipoll, -1, 0, 1,
-    if(!multipoll || initing != NOT_INITING) return;
-    holdscreenlock;
-    if(multipoll < 0 && (vsync || !maxfps)) conoutf(CON_WARN, "/multipoll -1 makes sense only with /vsync 0 and /maxfps non-zero. Make sure you really understand what /multipoll does.");
+    drawer::keepgl(multipoll == 1);
+    if(initing == NOT_INITING && multipoll < 0 && (vsync || !maxfps)) conoutf(CON_WARN, "/multipoll -1 makes sense only with /vsync 0 and /maxfps non-zero. Make sure you really understand what /multipoll does.");
 );
 XIDENT(IDF_SWLACC, VAR, nanodelay, 0, 50000, 999999);
 
@@ -1120,9 +1119,6 @@ int getclockmillis()
 
 VAR(numcpus, 1, 1, 16);
 
-SDL_mutex *screenlockholder::screenmutex = NULL;
-int screenlockholder::holdrecursion = 0;
-
 #ifdef __APPLE__
 #define main SDL_main
 #endif
@@ -1226,7 +1222,6 @@ int main(int argc, char **argv)
 
         if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO|SDL_INIT_AUDIO|par)<0) fatal("Unable to initialize SDL: %s", SDL_GetError());
     }
-    screenlockholder::screenmutex = SDL_CreateMutex();
     
     logoutf("init: net");
     if(enet_initialize()<0) fatal("Unable to initialise network module");
@@ -1327,62 +1322,6 @@ int main(int argc, char **argv)
 
     conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.3.1));
 
-    struct swapperthread
-    {
-
-        swapperthread(): doswap(SDL_CreateSemaphore(0)), locktaken(SDL_CreateSemaphore(0)) {
-            SDL_AtomicSet(&swapping_value, 0);
-            SDL_CreateThread((SDL_ThreadFunction)spin_, "drawer", this);
-        }
-
-        void swap(bool isswapper = false){
-            {
-                //grab the screen first to prevent the master thread from drawing next frame stuff on it
-                holdscreenlock;
-                SDL_AtomicSet(&swapping_value, 1);
-                if(isswapper) SDL_SemPost(locktaken);
-                SDL_GL_SwapWindow(screen);
-                //do this to concentrate OpenGL work in the swapper thread
-                if(isswapper) glFinish();
-                //release the lock first to avoid mutex contention
-            }
-            SDL_AtomicSet(&swapping_value, 0);
-        }
-
-        void letswap(){
-            SDL_SemPost(doswap);
-            while(!green(SDL_SemWait(locktaken)));
-        }
-
-        bool swapping(){
-            return SDL_AtomicGet(&swapping_value);
-        }
-
-    private:
-
-        SDL_atomic_t swapping_value;
-        SDL_sem *doswap, *locktaken;
-
-        static bool green(int err){
-            if(err == SDL_MUTEX_TIMEDOUT) return false;
-            if(!err) return true;
-            fprintf(stderr, "Fatal error waiting for a semaphore: %s", SDL_GetError());
-            exit(1);
-        }
-
-        void spin(){
-            while(true){
-                while(!green(SDL_SemWait(doswap)));
-                swap(true);
-            }
-        }
-        static int spin_(swapperthread *me){
-            me->spin();
-            return 0;
-        }
-
-    } swapper;
-
     uint64_t tick_last = tick();
     double finelastmillis = lastmillis, finetotalmillis = totalmillis;
     bool drawrequested = false;
@@ -1410,7 +1349,7 @@ int main(int argc, char **argv)
 
         if(!lightupdate) updatefps(1);
 
-        if(!drawrequested || swapper.swapping()){
+        if(!drawrequested || drawer::swapping()){
             if(lightupdate && !nanodelay) sched_yield();
             continue;
         }
@@ -1427,15 +1366,8 @@ int main(int argc, char **argv)
 
         if(minimized) continue;
 
-        inbetweenframes = false;
-        if(mainmenu) gl_drawmainmenu();
-        else gl_drawframe();
-
-        recorder::capture(true);
-        renderedframe = inbetweenframes = true;
-
-        if(!mainmenu && multipoll > 0) swapper.letswap();
-        else swapper.swap();
+        if(!mainmenu && multipoll > 0) drawer::letdraw();
+        else drawer::draw();
         updatefps(2, (tick() - start)/1000);
 
     }
