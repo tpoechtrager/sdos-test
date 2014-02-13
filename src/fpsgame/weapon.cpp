@@ -17,6 +17,8 @@ namespace game
     VARP(maxdebris, 10, 25, 1000);
     VARP(maxbarreldebris, 5, 10, 1000);
 
+    XIDENT(IDF_SWLACC, VARP, reducesparks, 0, 0, 1);
+
     ICOMMAND(getweapon, "", (), intret(player1->gunselect));
 
     void gunselect(int gun, fpsent *d)
@@ -595,7 +597,7 @@ XIDENT(IDF_SWLACC, VARP, smokefps, 0, 80, 200);
                     particle_flare(d->muzzle, d->muzzle, 200, PART_MUZZLE_FLASH3, 0xFFFFFF, 2.75f, d);
                 loopi(guns[gun].rays)
                 {
-                    particle_splash(PART_SPARK, 20, 250, rays[i], 0xB49B4B, 0.24f);
+                    if(!reducesparks) particle_splash(PART_SPARK, 20, 250, rays[i], 0xB49B4B, 0.24f);
                     particle_flare(hudgunorigin(gun, from, rays[i], d), rays[i], 300, PART_STREAK, 0xFFC864, 0.28f);
                     if(!local) adddecal(DECAL_BULLET, rays[i], vec(from).sub(rays[i]).normalize(), 2.0f);
                 }
@@ -606,7 +608,7 @@ XIDENT(IDF_SWLACC, VARP, smokefps, 0, 80, 200);
             case GUN_CG:
             case GUN_PISTOL:
             {
-                particle_splash(PART_SPARK, 200, 250, to, 0xB49B4B, 0.24f);
+                if(!reducesparks) particle_splash(PART_SPARK, 200, 250, to, 0xB49B4B, 0.24f);
                 particle_flare(hudgunorigin(gun, from, to, d), to, 600, PART_STREAK, 0xFFC864, 0.28f);
                 if(muzzleflash && d->muzzle.x >= 0)
                     particle_flare(d->muzzle, d->muzzle, gun==GUN_CG ? 100 : 200, PART_MUZZLE_FLASH1, 0xFFFFFF, gun==GUN_CG ? 2.25f : 1.25f, d);
@@ -639,7 +641,7 @@ XIDENT(IDF_SWLACC, VARP, smokefps, 0, 80, 200);
             }
 
             case GUN_RIFLE:
-                particle_splash(PART_SPARK, 200, 250, to, 0xB49B4B, 0.24f);
+                if(!reducesparks) particle_splash(PART_SPARK, 200, 250, to, 0xB49B4B, 0.24f);
                 particle_trail(PART_SMOKE, 500, hudgunorigin(gun, from, to, d), to, 0x404040, 0.6f, 20);
                 if(muzzleflash && d->muzzle.x >= 0)
                     particle_flare(d->muzzle, d->muzzle, 150, PART_MUZZLE_FLASH3, 0xFFFFFF, 1.25f, d);
