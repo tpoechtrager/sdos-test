@@ -2378,7 +2378,7 @@ void rendergeom(float causticspass, bool fogpass)
 
     if(doZP)
     {
-		//glFlush();
+		glFlush();
         if(shadowmap && hasFBO && mainpass)
         {
 			glDisableClientState(GL_VERTEX_ARRAY);
