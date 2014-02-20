@@ -247,8 +247,8 @@ endif
 ifdef LINUX
 client:	$(CLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o sauer_client $(CLIENT_OBJS) -Wl,--as-needed -Wl,--start-group $(CLIENT_LIBS) -lrt -Wl,--end-group
-	$(STRIP) sauer_client
 ifeq (,$(findstring -ggdb,$(CXXFLAGS)))
+	$(STRIP) sauer_client
 ifneq (, $(findstring x86_64,$(PREFIX)))
 	./remove_symbol_version memcpy@GLIBC_2.2.5
 endif
