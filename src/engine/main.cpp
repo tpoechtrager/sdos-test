@@ -339,6 +339,12 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     interceptkey(SDLK_UNKNOWN); // keep the event queue awake to avoid 'beachball' cursor
     #endif
 
+    extern uint64_t tick();
+    static uint64_t lastprogress = 0;
+    uint64_t now = tick();
+    if(now - lastprogress <= 1000000000/59) return;
+    lastprogress = now;
+
     extern int sdl_backingstore_bug;
     if(background || sdl_backingstore_bug > 0) restorebackground();
 
