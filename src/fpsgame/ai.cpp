@@ -1290,7 +1290,7 @@ namespace ai
                 c.override = false;
                 cleannext = false;
             }
-            if(d->state == CS_DEAD && d->respawned!=d->lifesequence && (!cmode || cmode->respawnwait(d) <= 0) && lastmillis - d->lastpain >= 500)
+            if(d->state == CS_DEAD && (!remote || d->respawned!=d->lifesequence) && (!cmode || cmode->respawnwait(d) <= 0) && lastmillis - d->lastpain >= 500)
             {
                 addmsg(N_TRYSPAWN, "rc", d);
                 d->respawned = d->lifesequence;
