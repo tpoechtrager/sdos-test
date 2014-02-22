@@ -932,7 +932,7 @@ namespace game
         }
     }
 
-    void sendmessages()
+    bool sendmessages(bool positionupdate)
     {
         packetbuf p(MAXTRANS);
         if(sendcrc)
@@ -959,23 +959,27 @@ namespace game
             messagereliable = false;
             messagecn = -1;
         }
-        if(totalmillis-lastping>250)
+        if(positionupdate && totalmillis-lastping>250)
         {
             putint(p, N_PING);
             putint(p, totalmillis);
             lastping = totalmillis;
         }
+        if(!p.length()) return false;
         sendclientpacket(p.finalize(), 1);
+        return true;
     }
 
     void c2sinfo(bool force) // send update to the server
     {
         static int lastupdate = -1000;
-        if(totalmillis - lastupdate < 33 && !force) return; // don't update faster than 30fps
-        lastupdate = totalmillis;
-        sendpositions();
-        sendmessages();
-        flushclient();
+        bool positionupdate = totalmillis - lastupdate >= 33 || force;
+        if(positionupdate)
+        {
+            lastupdate = totalmillis;
+            sendpositions();
+        }
+        if(sendmessages(positionupdate)) flushclient();
     }
 
     void sendintro()
@@ -1630,8 +1634,12 @@ namespace game
             }
 
             case N_PONG:
-                addmsg(N_CLIENTPING, "i", player1->ping = (player1->ping*5+totalmillis-getint(p))/6);
-                break;
+            {
+                packetbuf cping(10);
+                putint(cping, N_CLIENTPING);
+                putint(cping, player1->ping = (player1->ping*5+totalmillis-getint(p))/6);
+                sendclientpacket(cping.finalize(), 1);
+            }
 
             case N_CLIENTPING:
                 if(!d) return;
