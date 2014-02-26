@@ -31,53 +31,34 @@ The following is some sparse info of what you should consider while
 testing. Reports of oddities or bad functioning are important, but
 "everything works fine" is helpful too.
 
-- General stability and performance
-- Mouse input
-  - sensitivity might change. __Do not change your sensitivity with
-    the normal variables__. Please tune the variable
-    `sdl2_sensitivity_adjust` (default value 1.0), **and report your
-    findings**. Was sensitivity different from the standard
-    Sauerbraten client, and what value of `sdl2_sensitivity_adjust`
-    made it seem the same? This is very important!
-  - are all your mouse buttons recognized? If you have a mouse with
-    many buttons (more than 3), please test them thoroughfully. If a
-    button doesn't seem to be recognized, go in the `binds` options
-    panel, and try to bind the button to some action, and note the
-    button name, if it shows up
-  - the new `relativemouse 0|1` variable is related to the new SDL2
-    mouse handling. Default is 1, and 0 seems to never work, but if it
-    does for you, please report
-- Compatibility with vanilla config and data files
-  - new configuration variables should go to `sdos.cfg`, to avoid
-    interfering with `config.cfg`
-  - are there error messages (undefined variables and such) on
-    startup?
-  - are there error on startup shown by the vanilla client after the
-    test client has been run once, or unwanted modification to
-    configuration values?
-- Minimization, general window/fullscreen handling
-  - can you switch from the test client window/fullscreen to your
-    desktop? Try <kbd>Alt</kbd>+<kbd>Tab</kbd>, or <kbd>⌘ Win</kbd>+<kbd>R</kbd>, or
-    <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> too
-- Vertical synch
+- SDL2 should provider saner behavior with minimization and general
+  windowed or fullscreen gaming, input handling, and sounds playback.
   - variable `vsync` now is only 0 or 1 (-1 does not exist anymore)
-  - there is a new variable `vsynctear`, effective if vsync is on,
-    which should provide better vsync performance
-- <kbd>Ctrl+v</kbd> should finally work on linux, report if this is
-  not the case
-- Linux users with old OSes (specifically with an old glibc installed,
-  found on Debian wheezy) should now be able to run the normal binary,
-  not needing anymore an .oldglibc version, report if this is not the
-  case
+  - <kbd>Ctrl+v</kbd> should finally work on most linux setups
+  - Mouse input uses now the raw API (also known as "hardware mouse").
+    This has the side effect that [Windows 8.1 mouse input should be fine](http://www.reddit.com/r/windows/comments/1oor43/windows_81_warning_for_gamers_issues_with/ "some reddit rant"). If
+    for any reason you notice a difference, please report.
+- The engine can be run in an almost [fps-independent mode](https://github.com/pisto/sdos-test#bonus-pro-setting-multipoll--101-low-latency-input "just a few lines down i nthis README")
+- All dependent libraries are updated (and libjpeg is replace by
+  libjpeg-turbo), recompiled and linked statically for better performance.
+- New configuration variables should go to `sdos.cfg`, to avoid
+    interfering with `config.cfg`
 - `showfps 1` now uses a different internal logic: fps counting should
   be more precise and responsive, but the downside is that the refresh
   rate is now fixed to one second. Also, `showfpsrange 1` has no effect.
 - The original client draws one smoke "flake" for each drawn frame in the
   trail of grenades and rockets. This means that a higher fps degrades
   visibility. There is now a variable `smokefps [0-200]` (default 80) which
-  controls how many flakes can be drawn, for each trail, per second. 
-- `explosions 0|1`: you can disable the explosion ball for grenades and
-  rockets.
+  controls how many flakes can be drawn, for each trail, per second.
+- Use `reducesparks 1` to eliminate the drawing of bullet collision sparks
+  (ETERNALSOLSTICE wanted this so badly)
+- `explosions 0` disables the explosion ball for grenades and rockets, for
+  extra visibility
+- Map load times should be greatly improved with `vsync 1`, to match load
+  times without vsync.
+- The original client had an synthetic extra lag of 15ms (in average)
+  between the time you type text/hit/do any game action and when the
+  packet itself is sent to the server. This has been fixed.
 
 ## Bonus pro setting `multipoll -1|0|1`: low latency input. ##
 
