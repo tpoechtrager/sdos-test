@@ -268,3 +268,7 @@ void gets2c()           // get updates from the server
     }
 }
 
+ICOMMAND(debug_notimeouts, "b", (int *on), {
+	if(!clienthost) return;
+	clienthost->noTimeouts = *on;
+});
