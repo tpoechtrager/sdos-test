@@ -215,6 +215,7 @@ int connectwithtimeout(ENetSocket sock, const char *hostname, const ENetAddress 
 enum { UNRESOLVED = 0, RESOLVING, RESOLVED };
 
 XIDENT(IDF_SWLACC, VARP, keepserverprio, 0, 1, 1);
+XIDENT(IDF_SWLACC, VARP, limitpong, 0, 0, 1);
 
 struct serverinfo
 {
@@ -276,7 +277,7 @@ struct serverinfo
 
     bool limitpong()
     {
-        if(lastpong && totalmillis - lastpong < 1000) return false;
+        if(::limitpong && lastpong && totalmillis - lastpong < 1000) return false;
         lastpong = totalmillis;
         return true;
     }
