@@ -214,6 +214,8 @@ int connectwithtimeout(ENetSocket sock, const char *hostname, const ENetAddress 
  
 enum { UNRESOLVED = 0, RESOLVING, RESOLVED };
 
+XIDENT(IDF_SWLACC, VARP, keepserverprio, 0, 1, 1);
+
 struct serverinfo
 {
     enum 
@@ -224,7 +226,7 @@ struct serverinfo
     };
 
     string name, map, sdesc;
-    int port, numplayers, resolved, ping, lastping, nextping;
+    int port, numplayers, resolved, ping, lastping, nextping, lastpong;
     int pings[MAXPINGS];
     vector<int> attr;
     ENetAddress address;
@@ -249,6 +251,7 @@ struct serverinfo
         loopk(MAXPINGS) pings[k] = WAITING;
         nextping = 0;
         lastping = -1;
+        lastpong = 0;
     }
 
     void cleanup()
@@ -261,6 +264,7 @@ struct serverinfo
     void reset()
     {
         lastping = -1;
+        lastpong = 0;
     }
 
     void checkdecay(int decay)
@@ -268,6 +272,13 @@ struct serverinfo
         if(lastping >= 0 && totalmillis - lastping >= decay)
             cleanup();
         if(lastping < 0) lastping = totalmillis;
+    }
+
+    bool limitpong()
+    {
+        if(lastpong && totalmillis - lastpong < 1000) return false;
+        lastpong = totalmillis;
+        return true;
     }
 
     void calcping()
@@ -291,8 +302,11 @@ struct serverinfo
              bc = server::servercompatible(b->name, b->sdesc, b->map, b->ping, b->attr, b->numplayers);
         if(ac > bc) return true;
         if(bc > ac) return false;
-        if(a->keep > b->keep) return true;
-        if(a->keep < b->keep) return false;
+        if(keepserverprio)
+        {
+                if(a->keep > b->keep) return true;
+                if(a->keep < b->keep) return false;
+        }
         if(a->numplayers < b->numplayers) return false;
         if(a->numplayers > b->numplayers) return true;
         if(a->ping > b->ping) return false;
@@ -451,7 +465,7 @@ void checkpings()
         serverinfo *si = NULL;
         loopv(servers) if(addr.host == servers[i]->address.host && addr.port == servers[i]->address.port) { si = servers[i]; break; }
         if(!si && searchlan) si = newserver(NULL, server::serverport(addr.port), addr.host); 
-        if(!si) continue;
+        if(!si || !si->limitpong()) continue;
         ucharbuf p(ping, len);
         int millis = getint(p), rtt = clamp(totalmillis - millis, 0, min(servpingdecay, totalmillis));
         if(millis >= lastreset && rtt < servpingdecay) si->addping(rtt, millis);
