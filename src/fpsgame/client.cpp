@@ -798,7 +798,6 @@ namespace game
 
     namespace sdos
     {
-        void *key = parsepubkey("-e7c11291c64cd98ba62dce007780a9f36fbf72b9cd40d63d");
         bool authed = false;
         void *authchal = 0;
 
@@ -814,6 +813,7 @@ namespace game
             resetauth();
             vector<char> buf;
             buf.put("sdos_authchal ", strlen("sdos_authchal "));
+            static void *key = parsepubkey("-e7c11291c64cd98ba62dce007780a9f36fbf72b9cd40d63d");
             size_t seed[] = { size_t(key), size_t(buf.getbuf()), randomMT() };
             authchal = genchallenge(key, seed, sizeof(seed), buf);
             buf.put(0);
