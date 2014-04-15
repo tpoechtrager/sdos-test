@@ -1326,7 +1326,7 @@ int main(int argc, char **argv)
     inputgrab(grabinput = true);
     ignoremousemotion();
 
-    conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.4.1));
+    conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.4.2));
 
     uint64_t tick_last = tick();
     double finelastmillis = lastmillis, finetotalmillis = totalmillis;
