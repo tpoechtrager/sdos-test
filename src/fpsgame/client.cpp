@@ -1,5 +1,7 @@
 #include "game.h"
 
+extern int identflags;
+
 namespace game
 {
     VARP(minradarscale, 0, 384, 10000);
