@@ -1,0 +1,6 @@
+To install the client, do the following steps:
+
+.) locate your Sauerbraten icon, right-click on it, a menu appears, and click on "Show package contents"
+.) navigate to Contents/MacOS
+.) save the original executable ("sauerbraten") in a backup, and overwrite it with the one provided.
+

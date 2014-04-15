@@ -1,0 +1,24 @@
+#!/bin/bash
+
+mkdir ~/bin_unix ~/bin ~/bin64
+make distclean
+make -j4
+mv sauer_client ~/bin_unix/linux_64_client
+make distclean 
+make PREFIX=i686-unknown-linux-gnu -j4
+mv sauer_client ~/bin_unix/linux_client 
+make distclean 
+make PREFIX=i686-w64-mingw32 -j4
+mv sauerbraten.exe ~/bin
+make distclean
+make PREFIX=x86_64-w64-mingw32 -j4
+mv sauerbraten.exe ~/bin64/
+make distclean
+make lib*
+make OPTFLAGS="-ggdb3"
+cp INSTALL.{txt,lin} ~
+
+cd ~
+tar -zcf sdos-Cxx-lin.tar.gz bin_unix INSTALL.lin && rm -rf bin_unix INSTALL.lin
+zip -r sdos-Cxx-win.zip bin bin64 INSTALL.txt && rm -rf bin bin64 INSTALL.txt
+

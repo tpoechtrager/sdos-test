@@ -1,0 +1,2 @@
+To install the client, replace the files Sauerbraten/bin_unix/{linux_client,linux_64_client} with the ones provided.
+You might want to make a backup before.
