@@ -10,9 +10,11 @@ ifeq (,$(findstring -ggdb,$(CXXFLAGS)))
 endif
 
 ifneq (, $(findstring x86_64,$(PREFIX)))
-override CPUINFO+= -m64 
+override CPUINFO+= -m64
+else ifneq (, $(findstring amd64,$(PREFIX)))
+override CPUINFO+= -m64
 else
-override CPUINFO+= -m32 
+override CPUINFO+= -m32
 endif
 
 ifneq (, $(findstring mingw,$(PREFIX)))
@@ -29,12 +31,14 @@ ifneq (, $(STRIP))
 STRIP=x86_64-w64-mingw32-strip
 endif
 else ifneq (, $(findstring linux,$(PREFIX)))
-LINUX="esisto porca puttana"
+UNIX="esisto porca puttana"
 else ifneq (, $(findstring darwin,$(PREFIX)))
 CXX=clang++
 CC=clang
 override CPUINFO+= -mmacosx-version-min=10.5
 MAC="esisto porca puttana"
+else ifneq (, $(findstring freebsd,$(PREFIX)))
+UNIX=1
 else
 $(error Unknown architecture $(PREFIX))
 endif
@@ -62,9 +66,12 @@ ifdef WINDOWS
 CLIENT_INCLUDES= $(INCLUDES)
 CLIENT_LIBS= -mwindows -static-libgcc -static-libstdc++ -Llib -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lws2_32 -lwinmm -lopengl32 -ldxguid -lgdi32 -lole32 -limm32 -lversion -loleaut32 -Wl,-Bstatic -lpthread
 endif
-ifdef LINUX
+ifdef UNIX
 CLIENT_INCLUDES= $(INCLUDES) -I/usr/X11R6/include
-CLIENT_LIBS= -Llib -L/usr/X11R6/lib -lX11 -lGL -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm -ldl
+CLIENT_LIBS= -Llib -L/usr/X11R6/lib -lX11 -lGL -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm
+ifeq (, $(findstring bsd,$(PREFIX)))
+CLIENT_LIBS+= -ldl
+endif
 endif
 ifdef MAC
 CLIENT_INCLUDES= $(INCLUDES)
@@ -133,7 +140,7 @@ MACOBJCXX= xcode/macutils.o
 
 SAUER_DEPLIBS= libz libenet libSDL libSDL_image libSDL_mixer
 
-ifdef LINUX
+ifdef UNIX
 ifneq (, $(findstring x86_64,$(PREFIX)))
 override LDFLAGS+= -Wl,--wrap=__pow_finite,--wrap=__acosf_finite,--wrap=__log_finite,--wrap=__exp_finite,--wrap=__logf_finite,--wrap=__expf_finite,--wrap=__asin_finite,--wrap=__atan2f_finite,--wrap=__log10f_finite,--wrap=__atan2_finite,--wrap=__acos_finite,--wrap=memcpy
 override CLIENT_OBJS+= quirks/oldglibc64.o
@@ -176,7 +183,7 @@ libSDL_image/Makefile: libSDL libjpeg libpng
 	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ac_cv_lib_jpeg_jpeg_CreateDecompress=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS) -DDECLSPEC=\"\""
 endif
 
-ifdef LINUX
+ifdef UNIX
 libSDL/Makefile:
 	cd libSDL; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-video-dummy=no --enable-dummyaudio=no --enable-diskaudio=no --enable-video-directfb=no --enable-joystick=no --disable-haptic --disable-power --disable-dbus --disable-fusionsound --disable-libudev --disable-alsatest --enable-render=no --enable-video-opengles=no CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 libSDL_mixer/Makefile: libSDL libvorbis
@@ -244,13 +251,15 @@ client:	$(CLIENT_OBJS) $(MACOBJCXX) $(MACOBJC)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o sauer_client $(CLIENT_OBJS) $(MACOBJCXX) $(MACOBJC) $(CLIENT_LIBS) -framework IOKit -framework Cocoa -framework Carbon -framework CoreAudio -framework OpenGL -framework AudioUnit
 	$(STRIP) sauer_client
 endif
-ifdef LINUX
+ifdef UNIX
 client:	$(CLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o sauer_client $(CLIENT_OBJS) -Wl,--as-needed -Wl,--start-group $(CLIENT_LIBS) -lrt -Wl,--end-group
 ifeq (,$(findstring -ggdb,$(CXXFLAGS)))
 	$(STRIP) sauer_client
+ifneq (, $(findstring linux,$(PREFIX)))
 ifneq (, $(findstring x86_64,$(PREFIX)))
 	./remove_symbol_version memcpy@GLIBC_2.2.5
+endif
 endif
 	upx sauer_client
 endif

@@ -1123,7 +1123,7 @@ void queryreflections()
 
     varray::disable();
 
-    holdscreenlock();
+    holdscreenlock;
     if(refs)
     {
         defaultshader->set();
