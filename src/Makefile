@@ -17,8 +17,9 @@ else
 override CPUINFO+= -m32
 endif
 
-ifneq (, $(findstring mingw,$(PREFIX)))
 PREFIXHYPEN=$(PREFIX)-
+
+ifneq (, $(findstring mingw,$(PREFIX)))
 CXX=$(PREFIXHYPEN)g++
 CC=$(PREFIXHYPEN)gcc
 ifneq (, $(findstring x86_64,$(PREFIX)))
@@ -35,6 +36,15 @@ UNIX="esisto porca puttana"
 else ifneq (, $(findstring darwin,$(PREFIX)))
 CXX=clang++
 CC=clang
+ifneq (Darwin, $(shell uname -s))
+CXX:=$(PREFIXHYPEN)$(CXX)
+CC:=$(PREFIXHYPEN)$(CC)
+ifeq (strip, $(STRIP))
+override STRIP=$(PREFIXHYPEN)strip
+endif
+AR=$(PREFIXHYPEN)ar
+ARFLAGS=rcs
+endif
 override CPUINFO+= -mmacosx-version-min=10.5
 MAC="esisto porca puttana"
 else ifneq (, $(findstring freebsd,$(PREFIX)))
@@ -202,7 +212,7 @@ libSDL_image/Makefile: libSDL libjpeg libpng
 endif
 
 lib%: lib%/Makefile
-	$(MAKE)	-C $@/ install
+	$(MAKE) AR=$(AR) ARFLAGS=$(ARFLAGS) -C $@/ install
 
 clean-lib%:
 	-$(MAKE) -C lib$*/ uninstall distclean
@@ -243,9 +253,9 @@ endif
 ifdef MAC
 
 $(MACOBJCXX):
-	clang++ -c $(CXXFLAGS) $(CLIENT_INCLUDES) -o $@ $(subst .o,.mm,$@)
+	$(CXX) -c $(CXXFLAGS) $(CLIENT_INCLUDES) -o $@ $(subst .o,.mm,$@)
 $(MACOBJC):
-	clang -c $(CXXFLAGS) $(CLIENT_INCLUDES) -o $@ $(subst .o,.m,$@)
+	$(CC) -c $(CXXFLAGS) $(CLIENT_INCLUDES) -o $@ $(subst .o,.m,$@)
 
 client:	$(CLIENT_OBJS) $(MACOBJCXX) $(MACOBJC)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o sauer_client $(CLIENT_OBJS) $(MACOBJCXX) $(MACOBJC) $(CLIENT_LIBS) -framework IOKit -framework Cocoa -framework Carbon -framework CoreAudio -framework OpenGL -framework AudioUnit
@@ -256,9 +266,11 @@ client:	$(CLIENT_OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o sauer_client $(CLIENT_OBJS) -Wl,--as-needed -Wl,--start-group $(CLIENT_LIBS) -lrt -Wl,--end-group
 ifeq (,$(findstring -ggdb,$(CXXFLAGS)))
 	$(STRIP) sauer_client
+ifneq (1, $(NOCOMPATHACK))
 ifneq (, $(findstring linux,$(PREFIX)))
 ifneq (, $(findstring x86_64,$(PREFIX)))
 	./remove_symbol_version memcpy@GLIBC_2.2.5
+endif
 endif
 endif
 	upx sauer_client
