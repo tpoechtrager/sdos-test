@@ -328,6 +328,7 @@ void renderbackground(const char *caption, Texture *mapshot, const char *mapname
 }
 
 float loadprogress = 0;
+static ullong tick();
 
 void renderprogress(float bar, const char *text, GLuint tex, bool background)   // also used during loading
 {
@@ -339,9 +340,8 @@ void renderprogress(float bar, const char *text, GLuint tex, bool background)   
     interceptkey(SDLK_UNKNOWN); // keep the event queue awake to avoid 'beachball' cursor
     #endif
 
-    extern uint64_t tick();
-    static uint64_t lastprogress = 0;
-    uint64_t now = tick();
+    static ullong lastprogress = 0;
+    ullong now = tick();
     if(now - lastprogress <= 1000000000/59) return;
     lastprogress = now;
 
@@ -976,17 +976,17 @@ XIDENT(IDF_SWLACC, VAR, nanodelay, 0, 50000, 999999);
 #ifdef __APPLE__
 
 #include <mach/mach_time.h>
-uint64_t tick(){
+static inline ullong tick(){
         static mach_timebase_info_data_t tb;
         if(!tb.denom) mach_timebase_info(&tb);
-        return (mach_absolute_time()*uint64_t(tb.numer))/tb.denom;
+        return (mach_absolute_time()*ullong(tb.numer))/tb.denom;
 }
 
 #define main SDL_main
 
 #else
 
-uint64_t tick(){
+static inline ullong tick(){
     timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
     return t.tv_sec * 1000000000ULL + t.tv_nsec;
@@ -994,11 +994,11 @@ uint64_t tick(){
 
 #endif
 
-bool limitfps(uint64_t &tick_now)
+bool limitfps(ullong &tick_now)
 {
-    static uint64_t lastdraw = 0, lastrefresh = 0;
+    static ullong lastdraw = 0, lastrefresh = 0;
     int fpslimit = (mainmenu || minimized) && menufps ? (maxfps ? min(maxfps, menufps) : menufps) : maxfps;
-    uint64_t nextdraw = (fpslimit ? 1000000000ULL / fpslimit : 0) + lastdraw;
+    ullong nextdraw = (fpslimit ? 1000000000ULL / fpslimit : 0) + lastdraw;
     bool dodraw;
     timespec t, _;
     t.tv_sec = 0;
@@ -1008,7 +1008,7 @@ bool limitfps(uint64_t &tick_now)
             goto frame;
         }
         dodraw = fpslimit == 0;
-        uint64_t nextrefresh = lastrefresh + nanodelay;
+        ullong nextrefresh = lastrefresh + nanodelay;
         if(nextrefresh <= tick_now) goto frame;
         t.tv_nsec = nextrefresh - tick_now;
         nanosleep(&t, &_);
@@ -1328,12 +1328,12 @@ int main(int argc, char **argv)
 
     conoutf(stringify_macro(\f0Sauerbraten Day of Sobriety Test Client\f2 v1.4.2));
 
-    uint64_t tick_last = tick();
+    ullong tick_last = tick();
     double finelastmillis = lastmillis, finetotalmillis = totalmillis;
     bool drawrequested = false;
     for(;;)
     {
-        uint64_t tick_now = tick();
+        ullong tick_now = tick();
         drawrequested |= limitfps(tick_now);
         double elapsedmillis = double(tick_now - tick_last)/1000000;
         tick_last = tick_now;
@@ -1361,7 +1361,7 @@ int main(int argc, char **argv)
         }
         drawrequested = false;
 
-        uint64_t start = tick();
+        ullong start = tick();
 
         updatefps(0);
 
