@@ -149,7 +149,7 @@ void sendstring(const char *t, ucharbuf &p) { sendstring_(t, p); }
 void sendstring(const char *t, packetbuf &p) { sendstring_(t, p); }
 void sendstring(const char *t, vector<uchar> &p) { sendstring_(t, p); }
 
-void getstring(char *text, ucharbuf &p, int len)
+void getstring(char *text, ucharbuf &p, size_t len)
 {
     char *t = text;
     do
@@ -161,7 +161,7 @@ void getstring(char *text, ucharbuf &p, int len)
     while(*t++);
 }
 
-void filtertext(char *dst, const char *src, bool whitespace, int len)
+void filtertext(char *dst, const char *src, bool whitespace, size_t len)
 {
     for(int c = uchar(*src); c; c = uchar(*++src))
     {
