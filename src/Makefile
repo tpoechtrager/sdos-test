@@ -1,3 +1,4 @@
+USESYSLIBS ?= 0
 BUILDTRIPLET=$(shell libenet/config.guess)
 
 ifeq ($(strip $(PREFIX)),)
@@ -55,6 +56,13 @@ endif
 
 OPTFLAGS= -ffast-math -O3 -fomit-frame-pointer
 
+ifeq ($(USESYSLIBS), 1)
+override CXXFLAGS+=`sdl2-config --cflags`
+override SDLLIB=`sdl2-config --libs`
+else
+override SDLLIB=-lSDL2
+endif
+
 ifndef MAC
 CXXSTD= -std=c++11
 endif
@@ -70,7 +78,11 @@ endif
 
 TOPDIR= $(shell pwd)
 
-INCLUDES= -Ishared -Iengine -Ifpsgame -Iinclude -Iinclude/SDL2
+INCLUDES= -Ishared -Iengine -Ifpsgame -Iinclude
+
+ifneq ($(USESYSLIBS), 1)
+INCLUDES+= -Iinclude/SDL2
+endif
 
 ifdef WINDOWS
 CLIENT_INCLUDES= $(INCLUDES)
@@ -78,14 +90,14 @@ CLIENT_LIBS= -mwindows -static-libgcc -static-libstdc++ -Llib -lenet -lSDL2 -lSD
 endif
 ifdef UNIX
 CLIENT_INCLUDES= $(INCLUDES) -I/usr/X11R6/include
-CLIENT_LIBS= -Llib -L/usr/X11R6/lib -lX11 -lGL -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm
+CLIENT_LIBS= -Llib -L/usr/X11R6/lib -lX11 -lGL -lenet $(SDLLIB) -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm
 ifeq (, $(findstring bsd,$(PREFIX)))
 CLIENT_LIBS+= -ldl
 endif
 endif
 ifdef MAC
 CLIENT_INCLUDES= $(INCLUDES)
-CLIENT_LIBS= -Llib -lenet -lSDL2 -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm -ldl
+CLIENT_LIBS= -Llib -lenet $(SDLLIB) -lSDL2_image -ljpeg -lpng -lz -lSDL2_mixer -logg -lvorbis -lvorbisfile -lm -ldl
 endif
 
 CLIENT_OBJS= \
@@ -169,6 +181,7 @@ all: client
 libenet/Makefile:
 	cd libenet; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
 
+ifneq ($(USESYSLIBS), 1)
 libz/Makefile:
 	cd libz; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CHOST="$(PREFIX)" CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" CC=$(CC) ./configure --prefix="$(TOPDIR)" --static
 
@@ -209,6 +222,7 @@ libSDL_mixer/Makefile: libSDL libvorbis
 	cd libSDL_mixer; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-music-cmd=no --enable-music-mod=no --enable-music-mod-modplug=no --enable-music-midi=no --enable-music-fluidsynth-shared=no --enable-music-ogg-tremor=no --enable-music-ogg-shared=no --enable-music-flac=no --enable-music-flac-shared=no --enable-music-mp3=no --enable-music-mp3-mad-gpl=no --disable-sdltest CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib" LIBS="-logg -lvorbis -logg -lm"
 libSDL_image/Makefile: libSDL libjpeg libpng
 	cd libSDL_image; PKG_CONFIG_PATH="$(TOPDIR)/lib/pkgconfig" PATH="$(TOPDIR)/bin:$(PATH)" CC=$(CC) ac_cv_lib_jpeg_jpeg_CreateDecompress=yes ac_cv_func_memcmp_working=yes ./configure --host=$(PREFIX) --build=$(BUILDTRIPLET) --prefix="$(TOPDIR)" --enable-shared=no --enable-imageio=no --enable-jpg-shared=no --enable-png-shared=no --enable-webp=no --enable-tif=no --disable-sdltest CPPFLAGS="-pthread -I$(TOPDIR)/include" CFLAGS="-pthread -I$(TOPDIR)/include $(CPUINFO) $(OPTFLAGS)" LDFLAGS="$(CPUINFO) -L$(TOPDIR)/lib"
+endif
 endif
 
 lib%: lib%/Makefile
