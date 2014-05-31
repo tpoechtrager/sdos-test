@@ -1,7 +1,16 @@
 // main.cpp: initialisation & main loop
 
 #include "engine.h"
+
+#ifndef _MSC_VER
 #include <sched.h>
+#endif
+
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#endif
 
 extern void cleargamma();
 
@@ -973,26 +982,102 @@ XIDENT(IDF_SWLACC, VARFP, multipoll, -1, 0, 1,
 );
 XIDENT(IDF_SWLACC, VAR, nanodelay, 0, 50000, 999999);
 
-#ifdef __APPLE__
+#ifdef WIN32
+static ullong clockspeed;
 
-#include <mach/mach_time.h>
-static inline ullong tick(){
-        static mach_timebase_info_data_t tb;
-        if(!tb.denom) mach_timebase_info(&tb);
-        return (mach_absolute_time()*ullong(tb.numer))/tb.denom;
-}
+struct initnanotimer
+{
+#ifdef USE_TSC
+    llong getcpuspeedfromregistry()
+    {
+        long unsigned int mhz;
+        long unsigned int bufsize = sizeof(mhz);
+        HKEY key;
+        if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ, &key) != ERROR_SUCCESS) return 0;
+        if(RegQueryValueEx(key, "~MHz", NULL, NULL, (uchar*)&mhz, &bufsize) != ERROR_SUCCESS) return 0;
+        return mhz * 1000000LL;
+    }
+#endif //USE_TSC
 
-#define main SDL_main
-
+    llong getclockspeed()
+    {
+        LARGE_INTEGER speed;
+        if (!QueryPerformanceFrequency(&speed)) speed.QuadPart = 0;
+        llong result;
+#ifdef USE_TSC
+        result = max(speed.QuadPart, getcpuspeedfromregistry());
 #else
+        result = speed.QuadPart;
+#endif //USE_TSC
+        if(result <= 0) abort();
+        return result;
+    }
 
-static inline ullong tick(){
-    timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return t.tv_sec * 1000000000ULL + t.tv_nsec;
+    initnanotimer()
+    {
+#ifdef USE_TSC
+        if (!SDL_HasRDTSC()) fatal("cpu lacks rdtsc instruction");
+#endif
+        clockspeed = getclockspeed();
+    }
+} initnanotimer;
+#endif //WIN32
+
+static ullong nanosecbase = 0;
+
+ullong tick()
+{
+#ifdef WIN32
+#ifdef USE_TSC
+    double tmp = (__rdtsc() / (double)clockspeed)*1000000000.0;
+#else
+    ullong ticks;
+    if (!QueryPerformanceCounter((LARGE_INTEGER*)&ticks)) abort();
+    double tmp = (ticks / (double)clockspeed)*1000000000.0;
+#endif //USE_TSC
+    return tmp - nanosecbase;
+#else
+#ifndef __APPLE__
+    struct timespec tp;
+    struct timeval tv;
+    if (clock_gettime(CLOCK_MONOTONIC, &tp) == 0) return (ullong)((tp.tv_sec * 1000000000LL) + tp.tv_nsec) - nanosecbase;
+    if (gettimeofday(&tv, NULL) == 0) return (ullong)((tv.tv_sec * 1000000000LL) + (tv.tv_usec * 1000)) - nanosecbase;
+    abort();
+#else
+    union
+    {
+        AbsoluteTime at;
+        ullong ull;
+    } tmp;
+    tmp.ull = mach_absolute_time();
+    Nanoseconds ns = AbsoluteToNanoseconds(tmp.at);
+    tmp.ull = UnsignedWideToUInt64(ns) - nanosecbase;
+    return tmp.ull;
+#endif //__APPLE__
+#endif //WIN32
 }
 
+static inline void delay(llong ns)
+{
+#ifdef _MSC_VER
+    int ms = ns / 1000000;
+    ns %= 1000000;
+    Sleep(ms);
+    if(ns)
+    {
+        llong begin = tick();
+        while((llong)tick() - begin < ns) Sleep(0);
+    }
+#else
+    timespec t, rem;
+    next:;
+    t.tv_sec = ns / 1000000000LL;
+    t.tv_nsec = ns % 1000000000LL;
+    if(!nanosleep(&t, &rem)) return;
+    ns = rem.tv_sec * 1000000000LL + rem.tv_nsec;
+    if(ns > 0) goto next;
 #endif
+}
 
 bool limitfps(ullong &tick_now)
 {
@@ -1000,8 +1085,6 @@ bool limitfps(ullong &tick_now)
     int fpslimit = (mainmenu || minimized) && menufps ? (maxfps ? min(maxfps, menufps) : menufps) : maxfps;
     ullong nextdraw = (fpslimit ? 1000000000ULL / fpslimit : 0) + lastdraw;
     bool dodraw;
-    timespec t, _;
-    t.tv_sec = 0;
     if(multipoll){
         if(fpslimit && nextdraw <= tick_now){
             dodraw = true;
@@ -1010,8 +1093,7 @@ bool limitfps(ullong &tick_now)
         dodraw = fpslimit == 0;
         ullong nextrefresh = lastrefresh + nanodelay;
         if(nextrefresh <= tick_now) goto frame;
-        t.tv_nsec = nextrefresh - tick_now;
-        nanosleep(&t, &_);
+        delay(nextrefresh - tick_now);
         return limitfps(tick_now = tick());
     }
     else{
@@ -1019,8 +1101,7 @@ bool limitfps(ullong &tick_now)
             dodraw = true;
             goto frame;
         }
-        t.tv_nsec = nextdraw - tick_now;
-        nanosleep(&t, &_);
+        delay(nextdraw - tick_now);
         return limitfps(tick_now = tick());
     }
 frame:
@@ -1355,8 +1436,16 @@ int main(int argc, char **argv)
 
         if(!lightupdate) updatefps(1);
 
-        if(!drawrequested || drawer::swapping()){
-            if(lightupdate && !nanodelay) sched_yield();
+        if(!drawrequested || drawer::swapping())
+        {
+            if (lightupdate && !nanodelay)
+            {
+#ifdef _MSC_VER
+                Sleep(0);
+#else
+                sched_yield();
+#endif
+            }
             continue;
         }
         drawrequested = false;

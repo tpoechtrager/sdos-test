@@ -187,7 +187,7 @@ static void sdl2_keymap_hack_check(){
 		sdl2_keymap_hack = sdl2_keymap_hack_effective;
 		conoutf(CON_ERROR, "Cannot change sdl2_keymap_hack after the first keymap command has been issued!");
 	}
-	else sdl2_keymap_hack_effective = sdl2_keymap_hack;
+	else sdl2_keymap_hack_effective = sdl2_keymap_hack!=0;
 }
 VARF(sdl2_keymap_hack, 0, 1, 1, sdl2_keymap_hack_check());
 

@@ -2607,7 +2607,7 @@ static bool isdrawer(){
 }
 
 bool drawer::swapping(){
-    return SDL_AtomicGet(&_swapping);
+    return SDL_AtomicGet(&_swapping)!=0;
 }
 
 static void dispatch_job(djob j){
